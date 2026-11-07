@@ -5,7 +5,7 @@ export const db =
   globalDb.db ??
   new PrismaClient({
     adapter: new PrismaPg({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: process.env.DATABASE_URL_POOLED ?? process.env.DATABASE_URL,
       max: 5,
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,

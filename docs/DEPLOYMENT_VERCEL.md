@@ -6,21 +6,22 @@ Sube el código de la carpeta `GymIA` del equipo a la rama `main`. El repositori
 
 ## 2. Conectar Vercel
 
-En Vercel, importa el repositorio de GitHub y deja `./` como Root Directory. Vercel detecta Next.js, instala dependencias con npm a partir de `package-lock.json` y usa `npm run build`. El build ejecuta `prisma generate && next build`; no hace falta cambiar el Output Directory.
+En Vercel, importa el repositorio de GitHub y deja `./` como Root Directory. Vercel detecta Next.js, instala dependencias con npm a partir de `package-lock.json` y usa `npm run build`. El build aplica migraciones pendientes con `prisma migrate deploy`, genera Prisma Client y compila Next.js; no hace falta cambiar el Output Directory.
 
 Selecciona Node.js `24.x` en Project Settings → Build and Deployment → Node.js Version, de acuerdo con `package.json`.
 
 ## 3. Configurar PostgreSQL
 
-Gymia requiere PostgreSQL externo. Crea una base administrada (por ejemplo Supabase) y configura `DATABASE_URL` en las variables de Vercel para Production y Preview por separado. Usa una conexión TLS y un pooler compatible con las funciones serverless; no pongas la URL en Git ni en el navegador.
+Gymia requiere PostgreSQL administrado. Con Prisma Postgres, conecta la base al proyecto desde Storage y confirma que Vercel tenga `DATABASE_URL` y `DATABASE_URL_POOLED` en Production. No pongas las URL en Git ni en el navegador.
 
-Antes del primer despliegue, aplica las migraciones contra la base remota con `npm run db:migrate` y esa misma `DATABASE_URL`. Hazlo una sola vez desde un entorno controlado; no ejecutes `npm run db:seed` contra producción. La aplicación debe desplegarse con una base ya migrada.
+La aplicación usa `DATABASE_URL_POOLED` para consultas de runtime y Prisma Migrate usa la conexión directa de `DATABASE_URL`. El build de Production aplica únicamente las migraciones pendientes de `prisma/migrations`, de forma segura en despliegues repetidos. Los Preview no migran la base de producción. No ejecutes `npm run db:seed` contra producción.
 
 ## 4. Variables de entorno
 
 Configura en Vercel:
 
 - `DATABASE_URL`: conexión PostgreSQL remota con SSL.
+- `DATABASE_URL_POOLED`: conexión agrupada para consultas de la aplicación.
 - `BETTER_AUTH_URL`: origen HTTPS exacto del dominio que usarás, por ejemplo `https://gymia.vercel.app`, sin `/login` ni otra ruta.
 - `BETTER_AUTH_SECRET`: secreto aleatorio de al menos 32 caracteres.
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT`: necesarias para web push; los avisos internos siguen disponibles sin estas claves.
