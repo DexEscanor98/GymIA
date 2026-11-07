@@ -1729,28 +1729,47 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
             </>
           )}
           {page === 'settings' && owner && (
-            <>
-              <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>Plan de Gymia</h2>
-                    <p>
-                      El cobro mensual se procesa en Mercado Pago. Gymia activa el plan cuando el
-                      Webhook confirma el pago.
-                    </p>
-                    <p>
-                      Las alertas automáticas de gimnasio vacío o saturado y el pronóstico de horas
-                      pico aún no están disponibles. El historial muestra las entradas registradas.
-                    </p>
-                    {w.saasSubscriptions[0]?.status === 'ACTIVE' && (
-                      <p>
-                        Al cambiar de plan se cancela la renovación actual y el nuevo plan entra en
-                        vigor al confirmarse el pago.
-                      </p>
-                    )}
+            <div className="settings-page">
+              <section className="panel settings-panel settings-billing">
+                <div className="panel-heading settings-section-heading">
+                  <div className="settings-heading-copy">
+                    <span className="settings-kicker">Suscripción Gymia</span>
+                    <h2>Un plan que crece contigo</h2>
+                    <p>Administra tu plan, sucursales y personalización desde un solo lugar.</p>
                   </div>
-                  <Badge>{saasPlans[saasPlanKey(w.tenant.saasPlan)].name}</Badge>
+                  <div className="settings-current-plan">
+                    <span>Plan actual</span>
+                    <Badge>{saasPlans[saasPlanKey(w.tenant.saasPlan)].name}</Badge>
+                  </div>
                 </div>
+                <div className="settings-billing-notes">
+                  <div className="settings-note">
+                    <CreditCard size={19} aria-hidden="true" />
+                    <div>
+                      <strong>Cobro mensual seguro</strong>
+                      <p>
+                        Mercado Pago gestiona el pago recurrente. Gymia activa el plan cuando
+                        confirma el primer pago.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="settings-note settings-note-muted">
+                    <Activity size={19} aria-hidden="true" />
+                    <div>
+                      <strong>Información de ocupación</strong>
+                      <p>
+                        El historial muestra entradas registradas. Las alertas de gimnasio vacío o
+                        saturado y el pronóstico de horas pico aún no están disponibles.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {w.saasSubscriptions[0]?.status === 'ACTIVE' && (
+                  <p className="settings-plan-change-note">
+                    Si cambias de plan, se cancela la renovación actual. El nuevo plan comienza al
+                    confirmar el pago y el periodo ya pagado conserva su vigencia.
+                  </p>
+                )}
                 <div className="saas-plan-grid settings-plans">
                   {(
                     Object.entries(saasPlans) as [
@@ -1759,35 +1778,34 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                     ][]
                   ).map(([key, plan]) => (
                     <article
-                      className={`saas-plan-option ${w.tenant.saasPlan === key ? 'selected' : ''}`}
+                      className={`settings-plan-card ${w.tenant.saasPlan === key ? 'current' : ''}`}
                       key={key}
                     >
-                      <span className="saas-plan-name">{plan.name}</span>
-                      <strong>
-                        {plan.priceCents ? `$${(plan.priceCents / 100).toFixed(0)} MXN` : 'Gratis'}
-                      </strong>
-                      {plan.priceCents > 0 && <small>por mes</small>}
-                      <small>
-                        Hasta {plan.maxBranches}{' '}
-                        {plan.maxBranches === 1 ? 'sucursal' : 'sucursales'}
-                      </small>
-                      {key === 'FREE' ? (
-                        <small>
-                          30 clientes · 5 productos · 3 empleados · sin avisos ni reportes de
-                          ocupación
-                        </small>
-                      ) : plan.paidFeatures ? (
-                        <small>
-                          Clientes, productos y empleados ilimitados · avisos de vencimiento e
-                          historial por hora
-                        </small>
-                      ) : (
-                        <small>
-                          Clientes y productos sin límite · hasta 3 empleados · sin avisos avanzados
-                        </small>
-                      )}
+                      <div className="settings-plan-card-heading">
+                        <span className="settings-plan-name">{plan.name}</span>
+                        {w.tenant.saasPlan === key && (
+                          <span className="settings-plan-tag">Activo</span>
+                        )}
+                      </div>
+                      <div className="settings-plan-price">
+                        <strong>
+                          {plan.priceCents ? `$${(plan.priceCents / 100).toFixed(0)}` : 'Gratis'}
+                        </strong>
+                        {plan.priceCents > 0 && <span>MXN / mes</span>}
+                      </div>
+                      <div className="settings-plan-branches">
+                        <strong>{plan.maxBranches}</strong>
+                        <span>{plan.maxBranches === 1 ? 'sucursal' : 'sucursales'}</span>
+                      </div>
+                      <p className="settings-plan-features">
+                        {key === 'FREE'
+                          ? '30 clientes, 5 productos y 3 empleados. Sin avisos ni reportes de ocupación.'
+                          : plan.paidFeatures
+                            ? 'Clientes, productos y empleados sin límite. Incluye avisos de vencimiento e historial por hora.'
+                            : 'Clientes y productos sin límite, hasta 3 empleados y sin avisos avanzados.'}
+                      </p>
                       <button
-                        className={`button ${w.tenant.saasPlan === key ? 'secondary' : 'primary'} wide`}
+                        className={`button ${w.tenant.saasPlan === key ? 'secondary' : 'primary'} wide settings-plan-button`}
                         disabled={
                           busy ||
                           w.tenant.saasPlan === key ||
@@ -1813,14 +1831,14 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                               : 'Cancelar renovación'
                             : w.saasSubscriptions[0]?.status === 'ACTIVE'
                               ? `Cambiar a ${plan.name}`
-                              : 'Pagar con Mercado Pago'}
+                              : 'Elegir plan'}
                       </button>
                     </article>
                   ))}
                 </div>
                 {['PENDING', 'PAST_DUE'].includes(w.saasSubscriptions[0]?.status || '') && (
-                  <div className="list-row">
-                    <div>
+                  <div className="settings-payment-state">
+                    <div className="settings-payment-copy">
                       <strong>
                         {w.saasSubscriptions[0]?.status === 'PENDING'
                           ? 'Pago pendiente de confirmación'
@@ -1842,76 +1860,106 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                   </div>
                 )}
                 {w.tenant.subscriptionExpiresAt && w.tenant.saasPlan !== 'FREE' && (
-                  <p className="muted" style={{ padding: '0 22px 16px' }}>
+                  <p className="settings-expiration-note">
                     Próxima fecha de cobro: {date(w.tenant.subscriptionExpiresAt, 'dd MMM yyyy')}.
                   </p>
                 )}
-                <a
-                  className="text-button"
-                  href={`mailto:bytecservissoluciones@gmail.com?subject=${encodeURIComponent('Cotización Gymia para más de 10 sucursales')}`}
-                >
-                  Solicitar cotización para más de 10 sucursales o un plan a la medida
-                </a>
-              </section>
-              <section className="panel">
-                <div className="panel-heading">
+                <div className="settings-quote">
                   <div>
-                    <h2>Identidad del gimnasio</h2>
-                    <p>Nombre, color, logo y capacidad.</p>
+                    <strong>¿Necesitas más capacidad?</strong>
+                    <span>
+                      Cuéntanos cuántas sucursales necesitas y armamos un plan a tu medida.
+                    </span>
                   </div>
-                  <button className="button primary" onClick={op.settings}>
-                    Personalizar
-                  </button>
-                </div>
-                <div className="settings-preview">
-                  <div className="color-swatch" style={{ background: w.tenant.color }} />
-                  <div>
-                    <h2>{w.tenant.name}</h2>
-                    <p>
-                      {w.tenant.timezone} · Capacidad: {w.tenant.capacity} personas
-                    </p>
-                  </div>
-                </div>
-                <LogoUpload tenantId={w.tenant.id} logoUrl={w.tenant.logoUrl} onSaved={load} />
-              </section>
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2>Sucursales</h2>
-                  <button
+                  <a
                     className="button secondary"
-                    disabled={w.branches.length >= tenantPlan.maxBranches}
-                    onClick={op.branch}
+                    href={`mailto:bytecservissoluciones@gmail.com?subject=${encodeURIComponent('Cotización Gymia para más de 10 sucursales')}`}
                   >
-                    <Plus size={17} />
-                    {w.branches.length >= tenantPlan.maxBranches ? 'Límite del plan' : 'Agregar'}
-                  </button>
+                    Solicitar cotización <ArrowRight size={16} />
+                  </a>
                 </div>
-                {w.branches.map((b) => (
-                  <div className="list-row" key={b.id}>
-                    <strong>{b.name}</strong>
-                    <Badge>Activa</Badge>
+              </section>
+              <div className="settings-grid">
+                <section className="panel settings-panel">
+                  <div className="panel-heading settings-section-heading">
+                    <div className="settings-heading-copy">
+                      <span className="settings-kicker">Marca del gimnasio</span>
+                      <h2>Identidad y apariencia</h2>
+                      <p>Actualiza el nombre, color, logo y capacidad de tu espacio.</p>
+                    </div>
+                    <button className="button secondary" onClick={op.settings}>
+                      Personalizar
+                    </button>
                   </div>
-                ))}
-              </section>
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2>Historial de cambios</h2>
-                  <span className="muted">Últimos 100 movimientos</span>
-                </div>
-                <Table headers={['Fecha', 'Responsable', 'Operación', 'Referencia']}>
-                  {w.logs.map((l) => (
-                    <tr key={l.id}>
-                      <td>{date(l.createdAt)}</td>
-                      <td>{employee(l.actorId)}</td>
-                      <td>{l.action}</td>
-                      <td>
-                        <code>{l.entityId.slice(-8)}</code>
-                      </td>
-                    </tr>
-                  ))}
-                </Table>
-              </section>
-            </>
+                  <div className="settings-preview">
+                    <div className="color-swatch" style={{ background: w.tenant.color }} />
+                    <div className="settings-gym-preview-copy">
+                      <strong>{w.tenant.name}</strong>
+                      <span>
+                        {w.tenant.timezone} · Capacidad: {w.tenant.capacity} personas
+                      </span>
+                    </div>
+                  </div>
+                  <div className="settings-logo-upload">
+                    <LogoUpload tenantId={w.tenant.id} logoUrl={w.tenant.logoUrl} onSaved={load} />
+                  </div>
+                </section>
+                <section className="panel settings-panel">
+                  <div className="panel-heading settings-section-heading">
+                    <div className="settings-heading-copy">
+                      <span className="settings-kicker">Operación</span>
+                      <h2>Sucursales</h2>
+                      <p>
+                        {w.branches.length} de {tenantPlan.maxBranches} sucursales utilizadas en el
+                        plan actual.
+                      </p>
+                    </div>
+                    <button
+                      className="button secondary"
+                      disabled={w.branches.length >= tenantPlan.maxBranches}
+                      onClick={op.branch}
+                    >
+                      <Plus size={17} />
+                      {w.branches.length >= tenantPlan.maxBranches ? 'Límite del plan' : 'Agregar'}
+                    </button>
+                  </div>
+                  <div className="settings-branch-list">
+                    {w.branches.map((b) => (
+                      <div className="settings-branch-row" key={b.id}>
+                        <div className="settings-branch-mark">
+                          <Activity size={17} />
+                        </div>
+                        <strong>{b.name}</strong>
+                        <Badge>Activa</Badge>
+                      </div>
+                    ))}
+                    {!w.branches.length && <Empty text="Todavía no agregas sucursales." />}
+                  </div>
+                </section>
+                <section className="panel settings-panel settings-panel-wide">
+                  <div className="panel-heading settings-section-heading">
+                    <div className="settings-heading-copy">
+                      <span className="settings-kicker">Seguridad</span>
+                      <h2>Historial de cambios</h2>
+                      <p>Consulta las últimas acciones realizadas en este gimnasio.</p>
+                    </div>
+                    <span className="settings-history-count">Últimos 100 movimientos</span>
+                  </div>
+                  <Table headers={['Fecha', 'Responsable', 'Operación', 'Referencia']}>
+                    {w.logs.map((l) => (
+                      <tr key={l.id}>
+                        <td>{date(l.createdAt)}</td>
+                        <td>{employee(l.actorId)}</td>
+                        <td>{l.action}</td>
+                        <td>
+                          <code>{l.entityId.slice(-8)}</code>
+                        </td>
+                      </tr>
+                    ))}
+                  </Table>
+                </section>
+              </div>
+            </div>
           )}
           <footer className="workspace-footer">
             <span>
