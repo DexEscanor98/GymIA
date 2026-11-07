@@ -61,3 +61,11 @@ Tomar módulos según CONTRIBUTING.md; acordar primero contratos del modelo y AP
 Registro de nuevos gimnasios visible desde login. Subida de logos con validación, WebP de alta calidad y reemplazo atómico. PostgreSQL con pool de cinco conexiones y alta de organización serializable. Ver DEPLOYMENT_HOSTINGER.md; el despliegue externo debe confirmarse por separado, no se da por realizado por estas modificaciones.
 
 Validación de la preparación: 18 pruebas de reglas/integración y 4 pruebas de navegador aprobadas (incluyendo alta de nuevo dueño, creación de gimnasio y logo aislado). Compilación de producción y TypeScript aprobados. Las pruebas se ejecutaron contra PostgreSQL local. El ZIP Gymia_Hostinger.zip contiene solo código y documentación, sin contraseñas, datos ni dependencias.
+
+## Espacio personal e identificación Gymia · 7 de noviembre de 2026
+
+Se agregó registro/cuenta personal sin gimnasio y acceso separado en `/personal`; las cuentas de dueño para alta de organización continúan en `/setup-gym`. El perfil personal crea un ID estable `GYM-...` y dueño/recepción puede usarlo para vincular una cuenta existente, creando su ficha de cliente cuando aún no existe. No usar el ID como método de autenticación.
+
+El espacio personal incluye perfil y metas de macros, plan de alimentación editable, comidas, notas, rutinas, agenda y asistente con respuestas guiadas locales. Gratis: hasta 4 rutinas, 7 días de comidas y 30 sesiones visibles. Gymia Plus: precio sugerido de lanzamiento $99 MXN/mes, rutinas ilimitadas e historial de 90 días de comidas/300 sesiones. Mercado Pago activa Plus al confirmar importe y pago aprobado por webhook o conciliación; cancelar detiene renovación y mantiene el periodo pagado. El formulario de interés de nutriólogo no cobra y no reserva una consulta; falta integrar profesionales reales. El asistente no usa un LLM externo.
+
+La migración `20261107000000_personal_space` crea perfil e historiales personales y se aplica junto a las migraciones existentes en el build de Vercel. Pendiente: validar en Vercel que el entorno de producción tiene `DATABASE_URL`/`DATABASE_URL_POOLED`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET` y URL pública; probar una compra Plus en sandbox/prod según las credenciales activas y verificar el webhook. No incluir secretos en Git.

@@ -1,0 +1,2 @@
+ALTER TABLE "AthleteProfile"
+  ADD COLUMN "dietPlan" TEXT NOT NULL DEFAULT '';

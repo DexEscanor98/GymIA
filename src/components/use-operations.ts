@@ -106,20 +106,21 @@ export function useOperations(
         ],
         (v) => ({ ...v, id: m?.id }),
       ),
-    link: (m: MemberData) =>
+    link: (m?: MemberData) =>
       open(
         'Vincular cuenta del cliente',
         'member.link',
         [
           {
-            name: 'email',
-            label: 'Correo de la cuenta registrada',
-            type: 'email',
-            value: m.email || '',
+            name: 'publicId',
+            label: 'ID personal Gymia',
+            hint: 'El cliente lo encuentra en su espacio personal. Es único y no se puede cambiar ni transferir.',
           },
         ],
-        (v) => ({ ...v, id: m.id }),
-        'Confirma la identidad del cliente antes de vincular. Debe haber creado su cuenta previamente.',
+        (v) => ({ ...v, id: m?.id }),
+        m
+          ? 'Vincula la cuenta personal que corresponde a este cliente.'
+          : 'Se creará la ficha del cliente usando la cuenta personal indicada.',
       ),
     assign: (m: MemberData) =>
       open(

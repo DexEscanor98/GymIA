@@ -78,6 +78,35 @@ export async function POST(request: Request) {
         token,
       );
       if (!mpSubscription.external_reference) return json({ received: true });
+      const athlete = await db.athleteSubscription.findUnique({
+        where: { externalReference: mpSubscription.external_reference },
+      });
+      if (athlete) {
+        const status = ['cancelled', 'canceled'].includes(mpSubscription.status)
+          ? 'CANCELLED'
+          : mpSubscription.status === 'paused'
+            ? 'PAST_DUE'
+            : athlete.status;
+        await db.athleteSubscription.update({
+          where: { id: athlete.id },
+          data: {
+            mpPreapprovalId: mpSubscription.id,
+            status,
+            ...(mpSubscription.next_payment_date
+              ? { currentPeriodEnd: new Date(mpSubscription.next_payment_date) }
+              : {}),
+          },
+        });
+        if (
+          status === 'CANCELLED' &&
+          (!athlete.currentPeriodEnd || athlete.currentPeriodEnd <= new Date())
+        )
+          await db.athleteProfile.update({
+            where: { id: athlete.profileId },
+            data: { personalPlan: 'FREE' },
+          });
+        return json({ received: true });
+      }
       const local = await db.saasSubscription.findUnique({
         where: { externalReference: mpSubscription.external_reference },
       });
@@ -106,6 +135,56 @@ export async function POST(request: Request) {
       token,
     );
     if (!payment.preapproval_id) return json({ received: true });
+    const athlete = await db.athleteSubscription.findUnique({
+      where: { mpPreapprovalId: payment.preapproval_id },
+    });
+    if (athlete && athlete.status !== 'CANCELLED') {
+      const amountCents = Math.round(Number(payment.transaction_amount) * 100);
+      if (payment.currency_id !== 'MXN' || amountCents !== athlete.amountCents)
+        return json({ error: 'El importe del pago no coincide con la suscripción.' }, 400);
+      const paymentStatus = payment.payment?.status || payment.summarized || payment.status;
+      const approvedAt = payment.last_modified ? new Date(payment.last_modified) : new Date();
+      const remote = await mpGet<MpSubscription>(
+        `/preapproval/${encodeURIComponent(payment.preapproval_id)}`,
+        token,
+      );
+      const periodEnd = remote.next_payment_date
+        ? new Date(remote.next_payment_date)
+        : nextMonth(approvedAt);
+      const providerPaymentId = String(payment.payment?.id || payment.id);
+      await db.$transaction(async (tx) => {
+        await tx.athletePayment.upsert({
+          where: { providerPaymentId },
+          create: {
+            subscriptionId: athlete.id,
+            providerPaymentId,
+            amountCents,
+            status: paymentStatus,
+            approvedAt: paymentStatus === 'approved' ? approvedAt : null,
+          },
+          update: {
+            status: paymentStatus,
+            ...(paymentStatus === 'approved' ? { approvedAt } : {}),
+          },
+        });
+        if (paymentStatus === 'approved') {
+          await tx.athleteSubscription.update({
+            where: { id: athlete.id },
+            data: { status: 'ACTIVE', currentPeriodEnd: periodEnd },
+          });
+          await tx.athleteProfile.update({
+            where: { id: athlete.profileId },
+            data: { personalPlan: 'COACH' },
+          });
+        } else if (['rejected', 'cancelled'].includes(paymentStatus)) {
+          await tx.athleteSubscription.update({
+            where: { id: athlete.id },
+            data: { status: 'PAST_DUE' },
+          });
+        }
+      });
+      return json({ received: true });
+    }
     const local = await db.saasSubscription.findUnique({
       where: { mpPreapprovalId: payment.preapproval_id },
       include: { tenant: true },

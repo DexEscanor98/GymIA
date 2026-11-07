@@ -78,10 +78,26 @@ export async function members(c: Context, action: string, input: unknown) {
     }
     if (action === 'member.link') {
       allow(c.role, ['OWNER', 'RECEPTION']);
-      const d = z.object({ id: z.string(), email: z.email() }).parse(input);
-      await memberFor(tx, c, d.id);
-      const user = await tx.user.findUnique({ where: { email: d.email.toLowerCase() } });
-      ensure(user, 'La persona debe crear su cuenta con ese correo primero.');
+      const d = z
+        .object({
+          id: z.string().optional(),
+          publicId: z
+            .string()
+            .trim()
+            .regex(/^GYM-[A-F0-9]{20}$/),
+        })
+        .parse(input);
+      if (d.id) await memberFor(tx, c, d.id);
+      const profile = await tx.athleteProfile.findUnique({
+        where: { publicId: d.publicId },
+        include: { user: true },
+      });
+      ensure(
+        profile,
+        'No encontramos una cuenta personal con ese ID. Verifica el código con el cliente.',
+        404,
+      );
+      const user = profile.user;
       const access = await tx.access.findUnique({
         where: { tenantId_userId: { tenantId: c.tenantId, userId: user.id } },
       });
@@ -90,18 +106,47 @@ export async function members(c: Context, action: string, input: unknown) {
         'Esta cuenta es de un empleado de este gimnasio.',
       );
       ensure(
-        !(await tx.member.findFirst({
-          where: { tenantId: c.tenantId, userId: user.id, id: { not: d.id } },
-        })),
+        !d.id ||
+          !(await tx.member.findFirst({
+            where: { tenantId: c.tenantId, userId: user.id, id: { not: d.id } },
+          })),
         'La cuenta ya está vinculada a otro cliente.',
       );
+      if (!d.id) {
+        const linked = await tx.member.findFirst({
+          where: { tenantId: c.tenantId, userId: user.id },
+        });
+        if (linked) return linked;
+        const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
+        const memberLimit = planInfo(
+          effectivePlan(tenant.saasPlan, tenant.subscriptionExpiresAt),
+        ).maxMembers;
+        if (memberLimit !== null)
+          ensure(
+            (await tx.member.count({ where: { tenantId: c.tenantId } })) < memberLimit,
+            `El plan Gratis permite hasta ${memberLimit} clientes. Cambia de plan para registrar más.`,
+          );
+      }
       await tx.access.upsert({
         where: { tenantId_userId: { tenantId: c.tenantId, userId: user.id } },
         create: { tenantId: c.tenantId, userId: user.id, role: 'CLIENT' },
         update: { active: true },
       });
-      const result = await tx.member.update({ where: { id: d.id }, data: { userId: user.id } });
-      await audit(tx, c, action, d.id, { userId: user.id });
+      const result = d.id
+        ? await tx.member.update({
+            where: { id: d.id },
+            data: { userId: user.id, name: user.name, email: user.email },
+          })
+        : await tx.member.create({
+            data: {
+              tenantId: c.tenantId,
+              userId: user.id,
+              name: user.name,
+              email: user.email,
+              phone: null,
+            },
+          });
+      await audit(tx, c, action, result.id, { userId: user.id, publicId: profile.publicId });
       return result;
     }
     if (action === 'member.assign') {

@@ -37,6 +37,7 @@ import { OperationDialog } from './operation-dialog';
 import { QrScanner } from './qr-scanner';
 import { LogoUpload } from './logo-upload';
 import { PushNotifications } from './push-notifications';
+import Link from 'next/link';
 const money = (c: number) =>
   new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -552,6 +553,9 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
             </span>
           </div>
           <div className="topbar-right">
+            <Link className="text-button" href="/personal">
+              Mi espacio personal
+            </Link>
             {client && w.features.availability && <PushNotifications tenantId={w.tenant.id} />}
             {w.tenants.length > 1 && (
               <select
@@ -611,18 +615,24 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                 </button>
               )}
               {page === 'members' && staff && (
-                <button
-                  className="button primary"
-                  disabled={
-                    tenantPlan.maxMembers !== null && w.members.length >= tenantPlan.maxMembers
-                  }
-                  onClick={() => op.member()}
-                >
-                  <Plus size={18} />
-                  {tenantPlan.maxMembers !== null && w.members.length >= tenantPlan.maxMembers
-                    ? 'Límite de clientes'
-                    : 'Nuevo cliente'}
-                </button>
+                <>
+                  <button
+                    className="button primary"
+                    disabled={
+                      tenantPlan.maxMembers !== null && w.members.length >= tenantPlan.maxMembers
+                    }
+                    onClick={() => op.member()}
+                  >
+                    <Plus size={18} />
+                    {tenantPlan.maxMembers !== null && w.members.length >= tenantPlan.maxMembers
+                      ? 'Límite de clientes'
+                      : 'Nuevo cliente'}
+                  </button>
+                  <button className="button secondary" onClick={() => op.link()}>
+                    <Plus size={18} />
+                    Vincular por ID
+                  </button>
+                </>
               )}
               {page === 'products' && (
                 <button
@@ -1086,7 +1096,11 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                                     <button onClick={() => void showQr(m)}>
                                       Ver credencial QR
                                     </button>
-                                    <button onClick={() => op.link(m)}>Vincular cuenta</button>
+                                    {!m.userId && (
+                                      <button onClick={() => op.link(m)}>
+                                        Vincular por ID personal
+                                      </button>
+                                    )}
                                     <button onClick={() => op.sell('MEMBERSHIP', m.id)}>
                                       Vender / renovar membresía
                                     </button>

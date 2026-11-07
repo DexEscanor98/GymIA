@@ -33,7 +33,7 @@ export function AuthForm({
         );
         return;
       }
-      window.location.assign('/');
+      window.location.assign(register ? (gymOwner ? '/setup-gym' : '/personal') : '/');
     } catch {
       setError('No se pudo conectar. Intenta de nuevo.');
     } finally {
@@ -75,7 +75,7 @@ export function AuthForm({
             {register
               ? gymOwner
                 ? 'Paso 1 de 2. Crea tu cuenta de dueño; después darás nombre a tu gimnasio. Tendrás tu propio espacio para clientes, equipo y ventas.'
-                : 'Crea tu cuenta y pide a tu gimnasio que te vincule como empleado o cliente.'
+                : 'Crea tu espacio personal para registrar rutinas, entrenamientos y alimentación. Después podrás vincular tu cuenta con tu gimnasio.'
               : 'Inicia sesión para continuar con tu día.'}
           </p>
           <form onSubmit={submit}>
@@ -126,6 +126,15 @@ export function AuthForm({
             <div className="gym-signup">
               <h3>¿Tienes un gimnasio?</h3>
               <p>Registra tu gimnasio y administra tu equipo, membresías y ventas.</p>
+              <Link href="/register?gym=1" className="button secondary wide">
+                Registrar mi gimnasio <ArrowRight size={18} />
+              </Link>
+            </div>
+          )}
+          {register && !gymOwner && (
+            <div className="gym-signup">
+              <h3>¿Administras un gimnasio?</h3>
+              <p>Registra tu gimnasio para gestionar clientes, equipo y ventas.</p>
               <Link href="/register?gym=1" className="button secondary wide">
                 Registrar mi gimnasio <ArrowRight size={18} />
               </Link>

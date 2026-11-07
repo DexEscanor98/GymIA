@@ -23,7 +23,7 @@ async function command(action: string, input: unknown, ctx = c) {
   return execute(ctx, { action, input }) as Promise<any>;
 }
 beforeAll(async () => {
-  for (const n of ['owner', 'other', 'trainer', 'client']) {
+  for (const n of ['owner', 'other', 'trainer', 'client', 'athlete']) {
     const id = randomUUID();
     await db.user.create({ data: { id, email: `test-${id}@gymia.test`, name: n } });
     users.push(id);
@@ -209,6 +209,21 @@ describe.sequential('operaciones reales con PostgreSQL', () => {
     const data = await workspace(other);
     expect(data.members).toHaveLength(0);
     expect(data.products).toHaveLength(0);
+  });
+  it('vincula una cuenta personal usando su ID Gymia único y la crea como cliente del tenant', async () => {
+    const publicId = `GYM-${randomUUID().replaceAll('-', '').slice(0, 20).toUpperCase()}`;
+    await db.athleteProfile.create({ data: { userId: users[4], publicId } });
+    const linked = await command('member.link', { publicId });
+    expect(linked.userId).toBe(users[4]);
+    expect(linked.name).toBe('athlete');
+    expect(
+      await db.access.findUnique({
+        where: { tenantId_userId: { tenantId: c.tenantId, userId: users[4] } },
+      }),
+    ).toMatchObject({ role: 'CLIENT', active: true });
+    await expect(command('member.link', { publicId: 'GYM-00000000000000000000' })).rejects.toThrow(
+      'No encontramos',
+    );
   });
   it('activa membresía por venta, procesa solicitud del cliente y conserva días', async () => {
     const sale = await command('sale.create', {

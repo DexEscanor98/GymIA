@@ -72,6 +72,31 @@ test('API: bloquea sesiones anónimas y origen externo', async ({ request }) => 
   ).toBe(403);
 });
 
+test('espacio personal: registra cuenta independiente, ID Gymia y rutina propia', async ({
+  page,
+}) => {
+  const { randomUUID } = await import('node:crypto');
+  const { db } = await import('../../src/lib/db');
+  const email = `personal-${randomUUID()}@gymia.test`;
+  const password = randomUUID() + 'Aa1!';
+  try {
+    await page.goto('/register');
+    await page.getByLabel('Nombre completo').fill('Atleta de prueba');
+    await page.getByLabel('Correo electrónico').fill(email);
+    await page.getByLabel('Contraseña').fill(password);
+    await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
+    await expect(page).toHaveURL(/personal/);
+    await expect(page.getByRole('heading', { name: 'Hola, Atleta.' })).toBeVisible();
+    await expect(page.locator('.personal-id strong')).toHaveText(/^GYM-[A-F0-9]{20}$/);
+    await page.getByLabel('Nombre de rutina').fill('Rutina de prueba');
+    await page.getByLabel('Ejercicios y notas').fill('Sentadillas 3 x 8');
+    await page.getByRole('button', { name: 'Guardar rutina' }).click();
+    await expect(page.getByText('Rutina de prueba')).toBeVisible();
+  } finally {
+    await db.user.deleteMany({ where: { email } });
+  }
+});
+
 test('nuevo dueño: registro de gimnasio, logo optimizado y aislamiento', async ({
   page,
   browser,

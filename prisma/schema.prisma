@@ -25,6 +25,16 @@ enum SaasSubscriptionStatus {
   PAST_DUE
   CANCELLED
 }
+enum AthletePlan {
+  FREE
+  COACH
+}
+enum AthleteSubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
 enum MembershipStatus {
   ACTIVE
   FROZEN
@@ -51,6 +61,7 @@ model User {
   accounts Account[]
   accesses Access[]
   pushSubscriptions PushSubscription[]
+  athleteProfile AthleteProfile?
 }
 model Session {
   id String @id
@@ -396,4 +407,128 @@ model TenantLogo {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   data Bytes
   updatedAt DateTime @updatedAt
+}
+
+model AthleteProfile {
+  id String @id @default(cuid())
+  userId String @unique
+  publicId String @unique
+  goal String @default("Mejorar mi condición")
+  dietPlan String @default("")
+  weightKg Float?
+  heightCm Int?
+  dailyCalories Int @default(2000)
+  proteinGrams Int @default(120)
+  carbsGrams Int @default(220)
+  fatGrams Int @default(65)
+  personalPlan AthletePlan @default(FREE)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  notes AthleteNote[]
+  routines AthleteRoutine[]
+  workouts AthleteWorkout[]
+  meals AthleteMeal[]
+  coachMessages CoachMessage[]
+  nutritionistRequests NutritionistRequest[]
+  subscriptions AthleteSubscription[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AthleteNote {
+  id String @id @default(cuid())
+  profileId String
+  title String
+  content String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile AthleteProfile @relation(fields:[profileId], references:[id], onDelete:Cascade)
+  @@index([profileId, createdAt])
+}
+
+model AthleteRoutine {
+  id String @id @default(cuid())
+  profileId String
+  title String
+  details String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile AthleteProfile @relation(fields:[profileId], references:[id], onDelete:Cascade)
+  @@index([profileId, createdAt])
+}
+
+model AthleteWorkout {
+  id String @id @default(cuid())
+  profileId String
+  title String
+  startsAt DateTime
+  durationMinutes Int @default(60)
+  notes String?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  profile AthleteProfile @relation(fields:[profileId], references:[id], onDelete:Cascade)
+  @@index([profileId, startsAt])
+}
+
+model AthleteMeal {
+  id String @id @default(cuid())
+  profileId String
+  eatenAt DateTime @default(now())
+  mealName String
+  foods String
+  calories Int
+  proteinGrams Int
+  carbsGrams Int
+  fatGrams Int
+  createdAt DateTime @default(now())
+  profile AthleteProfile @relation(fields:[profileId], references:[id], onDelete:Cascade)
+  @@index([profileId, eatenAt])
+}
+
+model CoachMessage {
+  id String @id @default(cuid())
+  profileId String
+  question String
+  answer String
+  createdAt DateTime @default(now())
+  profile AthleteProfile @relation(fields:[profileId], references:[id], onDelete:Cascade)
+  @@index([profileId, createdAt])
+}
+
+model NutritionistRequest {
+  id String @id @default(cuid())
+  profileId String
+  goal String
+  message String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  profile AthleteProfile @relation(fields:[profileId], references:[id], onDelete:Cascade)
+  @@index([profileId, createdAt])
+}
+
+model AthleteSubscription {
+  id String @id @default(cuid())
+  profileId String
+  status AthleteSubscriptionStatus @default(PENDING)
+  amountCents Int
+  externalReference String @unique
+  mpPreapprovalId String? @unique
+  checkoutUrl String?
+  currentPeriodEnd DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile AthleteProfile @relation(fields:[profileId], references:[id], onDelete:Cascade)
+  payments AthletePayment[]
+  @@index([profileId, status])
+}
+
+model AthletePayment {
+  id String @id @default(cuid())
+  subscriptionId String
+  providerPaymentId String @unique
+  amountCents Int
+  status String
+  approvedAt DateTime?
+  createdAt DateTime @default(now())
+  subscription AthleteSubscription @relation(fields:[subscriptionId], references:[id], onDelete:Cascade)
+  @@index([subscriptionId, status])
 }

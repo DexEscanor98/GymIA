@@ -2628,3 +2628,336 @@ textarea:focus {
     align-items: stretch;
   }
 }
+.personal-page {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f4f5f7, #e9edf1 55%, #f8f9fa);
+  padding: 26px clamp(16px, 4vw, 64px) 48px;
+  color: #1b2433;
+}
+.personal-top {
+  max-width: 1440px;
+  margin: 0 auto 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.personal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.personal-actions .button,
+.personal-card .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+.personal-hero {
+  max-width: 1440px;
+  margin: 0 auto 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+}
+.personal-hero h1 {
+  font-size: clamp(38px, 5vw, 64px);
+  letter-spacing: -0.055em;
+  line-height: 1.05;
+  margin: 12px 0;
+}
+.personal-hero p {
+  color: #6c7687;
+  font-size: 17px;
+  margin: 0;
+}
+.personal-id {
+  min-width: 260px;
+  padding: 18px 20px;
+  border: 1px solid #ffffffbd;
+  background: #ffffffb0;
+  backdrop-filter: blur(22px);
+  border-radius: 22px;
+  box-shadow: 0 12px 38px #22334b0d;
+  display: grid;
+  gap: 8px;
+}
+.personal-id span,
+.personal-muted,
+.personal-id button {
+  color: #758093;
+  font-size: 13px;
+}
+.personal-id strong {
+  font:
+    600 18px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.05em;
+}
+.personal-id .text-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.personal-grid {
+  max-width: 1440px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.personal-card {
+  background: #ffffffc9;
+  border: 1px solid #ffffff;
+  border-radius: 25px;
+  padding: 24px;
+  box-shadow: 0 15px 42px #22334b0a;
+  min-width: 0;
+}
+.personal-wide {
+  grid-column: span 2;
+}
+.personal-card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  color: #667364;
+}
+.personal-card-title h2 {
+  color: #1d2635;
+  font-size: 23px;
+  letter-spacing: -0.035em;
+  margin: 6px 0 18px;
+}
+.personal-card-title > svg {
+  margin-top: 5px;
+}
+.personal-macros {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.personal-macros > div {
+  background: #f2f4f5;
+  border-radius: 15px;
+  padding: 13px;
+  display: grid;
+  gap: 4px;
+}
+.personal-macros b {
+  font-size: 18px;
+}
+.personal-macros small {
+  font-size: 11px;
+  color: #7b8492;
+}
+.personal-form {
+  display: grid;
+  gap: 11px;
+  margin: 16px 0;
+}
+.personal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.personal-form label {
+  min-width: 0;
+}
+.personal-field {
+  display: grid;
+  gap: 6px;
+  color: #525e70;
+  font-size: 13px;
+  font-weight: 600;
+}
+.personal-field input,
+.personal-field textarea {
+  width: 100%;
+  border: 1px solid #dce1e8;
+  background: #ffffffd9;
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: #202a39;
+  font: inherit;
+  font-weight: 400;
+  outline: none;
+}
+.personal-field input:focus,
+.personal-field textarea:focus {
+  border-color: #8b9b88;
+  box-shadow: 0 0 0 3px #71836c20;
+}
+.personal-form .button {
+  justify-self: start;
+}
+.personal-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.personal-list > div {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid #e8ebef;
+  padding: 10px 1px;
+  color: #1e2938;
+}
+.personal-list span,
+.personal-list small {
+  color: #737d8b;
+  font-size: 13px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.personal-nutrition {
+  border-top: 1px solid #e6e9ed;
+  margin-top: 20px;
+  padding-top: 17px;
+}
+.personal-nutrition p,
+.personal-subscription > p {
+  color: #6e7887;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.personal-subscription {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.personal-subscription .personal-card-title {
+  margin-bottom: 0;
+}
+.personal-subscription > small {
+  color: #718072;
+}
+.personal-gym-links {
+  max-width: 1440px;
+  margin: 0 auto 18px;
+  background: #e7ede7;
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.personal-gym-links span {
+  font-weight: 600;
+}
+.personal-gym-links small {
+  color: #687465;
+}
+.personal-alert,
+.personal-success {
+  max-width: 1440px;
+  margin: 0 auto 14px;
+  padding: 13px 16px;
+  border-radius: 13px;
+  background: #fce9e8;
+  color: #9a3933;
+}
+.personal-success {
+  background: #e7f1e7;
+  color: #386348;
+}
+.personal-loading {
+  max-width: 600px;
+  margin: 20vh auto;
+  padding: 24px;
+  background: #ffffffbd;
+  border-radius: 18px;
+  text-align: center;
+}
+.personal-footer {
+  max-width: 1440px;
+  margin: 24px auto 0;
+  color: #748092;
+  font-size: 13px;
+}
+.personal-page .button {
+  min-height: 42px;
+}
+.personal-page .eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  color: #78836f;
+}
+.personal-page .brand {
+  color: #222d3d;
+  text-decoration: none;
+  font-weight: 750;
+  font-size: 27px;
+  letter-spacing: -0.06em;
+}
+.personal-page .brand-symbol {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 8px;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: #d9e0e6;
+  color: #34413b;
+}
+.personal-page .brand-dot {
+  color: #7d8b77;
+}
+@media (max-width: 800px) {
+  .personal-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .personal-id {
+    min-width: 0;
+  }
+  .personal-grid {
+    grid-template-columns: 1fr;
+  }
+  .personal-wide {
+    grid-column: auto;
+  }
+  .personal-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .personal-macros {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .personal-top {
+    margin-bottom: 28px;
+  }
+}
+@media (max-width: 480px) {
+  .personal-page {
+    padding: 16px 13px 34px;
+  }
+  .personal-card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+  .personal-actions .button {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+  .personal-actions .button.secondary:first-child {
+    display: none;
+  }
+  .personal-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .personal-hero h1 {
+    font-size: 42px;
+  }
+}

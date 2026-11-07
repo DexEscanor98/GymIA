@@ -8,6 +8,9 @@ export default defineConfig({
     baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
     browserName: 'chromium',
     headless: true,
+    ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } }
+      : {}),
     trace: 'retain-on-failure',
   },
   reporter: 'list',
