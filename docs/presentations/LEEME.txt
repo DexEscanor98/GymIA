@@ -1,0 +1,14 @@
+PRESENTACIÓN GYMIA
+
+Archivos:
+- Presentacion_Gymia.html: presentación dinámica. Abrir en Chrome, Safari o Edge.
+- Presentacion_Gymia.pdf: versión estática de 14 diapositivas en formato panorámico.
+- capturas_reales/: pantallas tomadas del prototipo local con cuentas y datos ficticios.
+
+Controles de la presentación HTML:
+- Flechas izquierda/derecha o barra espaciadora: avanzar o retroceder.
+- N: mostrar u ocultar las notas del expositor.
+- F: activar pantalla completa.
+- Home / End: ir al inicio o al cierre.
+
+La demo funciona localmente y no representa un servicio SaaS desplegado ni listo para vender. Las pantallas contienen únicamente información ficticia de demostración. En la portada se dejó “Equipo Gymia”; antes de exponer, completen nombres, institución, asignatura y docente si la materia lo solicita.

@@ -1,0 +1,40 @@
+name: Validate
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: gymia
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: gymia
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U gymia"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://gymia:ci-only-password@127.0.0.1:5432/gymia
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-secret-not-for-production-0123456789
+      SEED_PASSWORD: ci-only-demo-password-12345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run start > /tmp/gymia-server.log 2>&1 &
+      - run: for i in $(seq 1 30); do curl -fsS http://localhost:3000/login && break || sleep 1; done
+      - run: npm run test:e2e

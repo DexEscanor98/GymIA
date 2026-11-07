@@ -1,0 +1,351 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  OWNER
+  RECEPTION
+  TRAINER
+  CLIENT
+}
+enum MembershipStatus {
+  ACTIVE
+  FROZEN
+  CANCELLED
+}
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
+enum AppointmentStatus {
+  BOOKED
+  COMPLETED
+  CANCELLED
+}
+model User {
+  id String @id
+  name String
+  email String @unique
+  emailVerified Boolean @default(false)
+  image String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  accounts Account[]
+  accesses Access[]
+  pushSubscriptions PushSubscription[]
+}
+model Session {
+  id String @id
+  expiresAt DateTime
+  token String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([userId])
+}
+model Account {
+  id String @id
+  accountId String
+  providerId String
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  accessToken String?
+  refreshToken String?
+  idToken String?
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope String?
+  password String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId])
+}
+model Verification {
+  id String @id
+  identifier String
+  value String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([identifier])
+}
+model RateLimit {
+  id String @id @default(cuid())
+  key String @unique
+  count Int
+  lastRequest BigInt
+}
+model Tenant {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  color String @default("#b9c1cb")
+  logoUrl String?
+  logo TenantLogo?
+  timezone String @default("America/Mexico_City")
+  capacity Int @default(80)
+  comfortableCapacity Int @default(50)
+  createdAt DateTime @default(now())
+  accesses Access[]
+  branches Branch[]
+  members Member[]
+  products Product[]
+  plans Plan[]
+  shifts Shift[]
+  pushSubscriptions PushSubscription[]
+}
+model Access {
+  id String @id @default(cuid())
+  tenantId String
+  userId String
+  role Role
+  active Boolean @default(true)
+  tenant Tenant @relation(fields:[tenantId],references:[id])
+  user User @relation(fields:[userId],references:[id])
+  @@unique([tenantId,userId])
+}
+model Branch {
+  id String @id @default(cuid())
+  tenantId String
+  name String
+  tenant Tenant @relation(fields:[tenantId],references:[id])
+  @@index([tenantId])
+}
+model Member {
+  id String @id @default(cuid())
+  tenantId String
+  name String
+  email String?
+  phone String?
+  userId String?
+  trainerId String?
+  preference String @default("ANY")
+  qrToken String @unique @default(uuid())
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields:[tenantId],references:[id])
+  memberships Membership[]
+  appointments Appointment[]
+  @@unique([tenantId,userId])
+  @@index([tenantId,name])
+}
+model Plan {
+  id String @id @default(cuid())
+  tenantId String
+  name String
+  priceCents Int
+  days Int
+  personalTraining Boolean @default(false)
+  allBranches Boolean @default(true)
+  branchIds String[]
+  active Boolean @default(true)
+  tenant Tenant @relation(fields:[tenantId],references:[id])
+  @@index([tenantId])
+}
+model Membership {
+  id String @id @default(cuid())
+  tenantId String
+  memberId String
+  planId String
+  planName String
+  startsAt DateTime
+  endsAt DateTime
+  status MembershipStatus @default(ACTIVE)
+  paid Boolean @default(true)
+  personalTraining Boolean @default(false)
+  allBranches Boolean @default(true)
+  branchIds String[]
+  frozenAt DateTime?
+  remainingMs BigInt?
+  freezeReason String?
+  member Member @relation(fields:[memberId],references:[id])
+  @@index([tenantId,memberId])
+}
+model FreezeRequest {
+  id String @id @default(cuid())
+  tenantId String
+  memberId String
+  membershipId String
+  reason String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  @@index([tenantId,status])
+}
+model Product {
+  id String @id @default(cuid())
+  tenantId String
+  name String
+  priceCents Int
+  stock Int @default(0)
+  active Boolean @default(true)
+  tenant Tenant @relation(fields:[tenantId],references:[id])
+  @@index([tenantId])
+}
+model StockMovement {
+  id String @id @default(cuid())
+  tenantId String
+  productId String
+  delta Int
+  kind String
+  reason String
+  actorId String
+  saleId String?
+  createdAt DateTime @default(now())
+  @@index([tenantId,productId])
+}
+model Shift {
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  userId String
+  openedAt DateTime @default(now())
+  closedAt DateTime?
+  openingCents Int
+  countedCents Int?
+  expectedCents Int?
+  transferCents Int?
+  tenant Tenant @relation(fields:[tenantId],references:[id])
+  sales Sale[] @relation("Sales")
+  refunds Sale[] @relation("Refunds")
+  movements CashMovement[]
+  @@index([tenantId,openedAt])
+}
+model CashMovement {
+  id String @id @default(cuid())
+  tenantId String
+  shiftId String
+  amountCents Int
+  reason String
+  createdAt DateTime @default(now())
+  shift Shift @relation(fields:[shiftId],references:[id])
+  @@index([tenantId,shiftId])
+}
+model Sale {
+  id String @id @default(cuid())
+  tenantId String
+  shiftId String
+  memberId String?
+  productId String?
+  membershipId String?
+  label String
+  quantity Int
+  unitCents Int
+  totalCents Int
+  method PaymentMethod
+  reference String?
+  createdAt DateTime @default(now())
+  cancelledAt DateTime?
+  cancelReason String?
+  refundShiftId String?
+  refundMethod PaymentMethod?
+  restocked Boolean?
+  idempotencyKey String
+  shift Shift @relation("Sales",fields:[shiftId],references:[id])
+  refundShift Shift? @relation("Refunds",fields:[refundShiftId],references:[id])
+  @@unique([tenantId,idempotencyKey])
+  @@index([tenantId,createdAt])
+}
+model Visit {
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  memberId String
+  enteredAt DateTime @default(now())
+  exitedAt DateTime?
+  actorId String
+  automaticExit Boolean @default(false)
+  @@index([tenantId,enteredAt])
+}
+model StaffAttendance {
+  id String @id @default(cuid())
+  tenantId String
+  userId String
+  enteredAt DateTime @default(now())
+  exitedAt DateTime?
+  @@index([tenantId,userId])
+}
+model Appointment {
+  id String @id @default(cuid())
+  tenantId String
+  memberId String
+  trainerId String
+  startsAt DateTime
+  endsAt DateTime
+  serviceDay String
+  status AppointmentStatus @default(BOOKED)
+  completedAt DateTime?
+  rating Int?
+  comment String?
+  member Member @relation(fields:[memberId],references:[id])
+  @@index([tenantId,trainerId,startsAt])
+}
+model Schedule {
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  weekday Int
+  closed Boolean @default(false)
+  opens String
+  closes String
+  @@unique([tenantId,branchId,weekday])
+}
+model ScheduleException {
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  date String
+  closed Boolean @default(true)
+  opens String?
+  closes String?
+  reason String
+  @@unique([tenantId,branchId,date])
+}
+model Notification {
+  id String @id @default(cuid())
+  tenantId String
+  memberId String
+  kind String
+  message String
+  dedupeKey String @unique
+  createdAt DateTime @default(now())
+  readAt DateTime?
+  pushSentAt DateTime?
+  @@index([tenantId,memberId])
+}
+model PushSubscription {
+  id String @id @default(cuid())
+  tenantId String
+  userId String
+  endpoint String
+  p256dh String
+  auth String
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@unique([tenantId,userId,endpoint])
+  @@index([tenantId,userId])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  tenantId String
+  actorId String
+  action String
+  entityId String
+  details Json
+  createdAt DateTime @default(now())
+  @@index([tenantId,createdAt])
+}
+
+model TenantLogo {
+  tenantId String @id
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  data Bytes
+  updatedAt DateTime @updatedAt
+}

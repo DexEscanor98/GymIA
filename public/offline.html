@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Gymia · Sin conexión</title
+  ><style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f6f8f5;
+      color: #20342f;
+      font-family: system-ui;
+    }
+    main {
+      max-width: 400px;
+      padding: 35px;
+      text-align: center;
+    }
+    button {
+      background: #c5f36b;
+      border: 0;
+      padding: 14px 24px;
+      border-radius: 9px;
+      font: inherit;
+      cursor: pointer;
+    }
+    p {
+      line-height: 1.6;
+    }
+  </style>
+  <main>
+    <h1>Volvemos cuando haya conexión.</h1>
+    <p>
+      Gymia necesita internet para comprobar membresías y guardar operaciones. No se registraron
+      ventas ni accesos sin conexión.
+    </p>
+    <button onclick="location.reload()">Intentar de nuevo</button>
+  </main>
+</html>

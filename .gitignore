@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+.local/
+src/generated/
+*.tsbuildinfo
+playwright-report/
+test-results/
+.DS_Store
+coverage/
+
+LOCAL-ACCESS.md

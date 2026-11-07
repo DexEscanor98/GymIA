@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: gymia
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?Run npm run setup first}
+      POSTGRES_DB: gymia
+    ports:
+      - '127.0.0.1:55432:5432'
+    volumes:
+      - gymia_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gymia']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  gymia_postgres:

@@ -1,0 +1,1 @@
+ALTER TABLE "Tenant" ALTER COLUMN "color" SET DEFAULT '#b9c1cb';
