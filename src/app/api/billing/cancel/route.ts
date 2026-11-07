@@ -34,7 +34,26 @@ export async function POST(request: Request) {
         cache: 'no-store',
       },
     );
-    if (!response.ok) return json({ error: 'Mercado Pago no pudo cancelar la renovación.' }, 502);
+    if (!response.ok) {
+      const providerError = (await response.json().catch(() => ({}))) as {
+        cause?: Array<{ code?: number | string }>;
+      };
+      const causeCode = String(providerError.cause?.[0]?.code ?? '');
+      let message = `Mercado Pago rechazó la cancelación (HTTP ${response.status}). La renovación sigue sin confirmarse como cancelada.`;
+
+      if (response.status === 401 || response.status === 403) {
+        message =
+          'Mercado Pago rechazó las credenciales activas. Revisa que el Access Token corresponda al mismo entorno y cuenta que creó esta suscripción.';
+      } else if (response.status === 404 || causeCode === '2000') {
+        message =
+          'Mercado Pago no encuentra esta suscripción con las credenciales activas. Si se creó con credenciales de prueba, debe cancelarse desde ese entorno; no se marcó como cancelada en Gymia.';
+      } else if (response.status === 400) {
+        message =
+          'Mercado Pago rechazó los datos de cancelación (HTTP 400). La suscripción no se marcó como cancelada en Gymia.';
+      }
+
+      return json({ error: message, providerStatus: response.status }, 502);
+    }
     await db.saasSubscription.update({
       where: { id: subscription.id },
       data: { status: 'CANCELLED' },
