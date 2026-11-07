@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import './globals.css';
 export const metadata: Metadata = {
   title: 'Gymia · Tu gimnasio, en orden',
   description: 'Administración de gimnasios, membresías, ventas y entrenamiento.',
@@ -10,9 +11,6 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, them
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <head>
-        <link rel="stylesheet" href="/gymia.css" />
-      </head>
       <body>{children}</body>
     </html>
   );
