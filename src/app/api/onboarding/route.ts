@@ -12,7 +12,14 @@ export async function POST(request: Request) {
     const d = z
       .object({
         name: z.string().trim().min(2).max(80),
-        slug: z.string().regex(/^[a-z0-9][a-z0-9-]{2,39}$/),
+        slug: z
+          .string()
+          .trim()
+          .toLowerCase()
+          .regex(
+            /^[a-z0-9][a-z0-9-]{2,39}$/,
+            'Usa entre 3 y 40 caracteres: letras, números y guiones; comienza con letra o número.',
+          ),
       })
       .parse(await readBody(request));
     const result = await transaction(async (tx) => {

@@ -254,6 +254,17 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                 name="slug"
                 placeholder="mi-gimnasio"
                 pattern="[a-z0-9][a-z0-9-]{2,39}"
+                minLength={3}
+                maxLength={40}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                onInput={(e) => {
+                  e.currentTarget.value = e.currentTarget.value
+                    .toLowerCase()
+                    .trimStart()
+                    .replace(/\s+/g, '-');
+                }}
                 required
               />
             </label>
