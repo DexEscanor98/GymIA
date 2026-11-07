@@ -113,7 +113,7 @@ export async function POST(request: Request) {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ status: 'canceled' }),
+          body: JSON.stringify({ status: 'cancelled' }),
           cache: 'no-store',
         },
       );
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ status: 'canceled' }),
+          body: JSON.stringify({ status: 'cancelled' }),
           cache: 'no-store',
         }).catch(() => undefined);
         await db.saasSubscription.update({

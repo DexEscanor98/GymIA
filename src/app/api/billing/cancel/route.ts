@@ -30,7 +30,7 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: 'canceled' }),
+        body: JSON.stringify({ status: 'cancelled' }),
         cache: 'no-store',
       },
     );
