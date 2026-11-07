@@ -12,7 +12,7 @@ export const saasPlans = {
   },
   LITE: {
     name: 'Lite',
-    priceCents: 13_900,
+    priceCents: 15_000,
     maxBranches: 1,
     maxProducts: null,
     maxMembers: null,
@@ -21,7 +21,7 @@ export const saasPlans = {
   },
   BASIC: {
     name: 'Básico',
-    priceCents: 35_000,
+    priceCents: 37_000,
     maxBranches: 2,
     maxProducts: null,
     maxMembers: null,
@@ -30,7 +30,7 @@ export const saasPlans = {
   },
   STANDARD: {
     name: 'Estándar',
-    priceCents: 55_000,
+    priceCents: 57_900,
     maxBranches: 6,
     maxProducts: null,
     maxMembers: null,
@@ -39,7 +39,7 @@ export const saasPlans = {
   },
   PREMIUM: {
     name: 'Premium',
-    priceCents: 85_000,
+    priceCents: 89_100,
     maxBranches: 10,
     maxProducts: null,
     maxMembers: null,
