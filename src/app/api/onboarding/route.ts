@@ -29,7 +29,9 @@ export async function POST(request: Request) {
       );
       const tenant = await tx.tenant.create({
         data: {
-          ...d,
+          name: d.name,
+          slug: d.slug,
+          saasPlan: 'FREE',
           accesses: { create: { userId: session.user.id, role: 'OWNER' } },
           branches: { create: { name: 'Principal' } },
         },

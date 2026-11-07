@@ -1,7 +1,11 @@
 import { db } from '@/lib/db';
 import { cashTotals, dayBounds, localDay, membershipState } from '@/lib/domain';
 import type { Context } from './context';
+import { effectivePlan, planInfo } from '@/lib/saas-plans';
 export async function workspace(c: Context, reportDay?: string) {
+  const tenantRecord = await db.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
+  const activePlan = effectivePlan(tenantRecord.saasPlan, tenantRecord.subscriptionExpiresAt);
+  const features = { availability: planInfo(activePlan).paidFeatures };
   const staff = c.role === 'OWNER' || c.role === 'RECEPTION';
   const memberWhere = {
     tenantId: c.tenantId,
@@ -23,7 +27,6 @@ export async function workspace(c: Context, reportDay?: string) {
         : localDay(new Date(), c.timezone),
     { start, end } = dayBounds(day, c.timezone);
   const [
-    tenant,
     branches,
     accesses,
     products,
@@ -40,8 +43,8 @@ export async function workspace(c: Context, reportDay?: string) {
     notifications,
     stockMovements,
     tenants,
+    saasSubscriptions,
   ] = await Promise.all([
-    db.tenant.findUniqueOrThrow({ where: { id: c.tenantId } }),
     db.branch.findMany({ where: { tenantId: c.tenantId } }),
     db.access.findMany({
       where: {
@@ -125,7 +128,7 @@ export async function workspace(c: Context, reportDay?: string) {
           take: 100,
         })
       : [],
-    c.role === 'CLIENT'
+    c.role === 'CLIENT' && features.availability
       ? db.notification.findMany({
           where: { tenantId: c.tenantId, memberId: { in: ids } },
           orderBy: { createdAt: 'desc' },
@@ -143,6 +146,14 @@ export async function workspace(c: Context, reportDay?: string) {
       where: { userId: c.userId, active: true },
       include: { tenant: { select: { id: true, name: true } } },
     }),
+    c.role === 'OWNER'
+      ? db.saasSubscription.findMany({
+          where: { tenantId: c.tenantId },
+          include: { payments: { orderBy: { createdAt: 'desc' }, take: 5 } },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        })
+      : [],
   ]);
   const [daySales, dayRefunds] = staff
     ? await Promise.all([
@@ -170,9 +181,11 @@ export async function workspace(c: Context, reportDay?: string) {
   return {
     context: c,
     dailyTotals,
-    tenant,
+    tenant: { ...tenantRecord, saasPlan: activePlan },
+    features,
     branches,
     tenants: tenants.map((t) => t.tenant),
+    saasSubscriptions,
     members: memberRows.map((m) => ({
       ...m,
       ...(c.role === 'TRAINER' ? { email: null, phone: null, qrToken: '' } : {}),

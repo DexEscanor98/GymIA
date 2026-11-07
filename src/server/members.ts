@@ -3,6 +3,8 @@ import { allow, ensure, freezeRemaining, membershipAllows } from '@/lib/domain';
 import { transaction, audit, memberFor } from './common';
 import type { Context } from './context';
 import { provisionUser } from './accounts';
+import { effectivePlan, planInfo } from '@/lib/saas-plans';
+import { db } from '@/lib/db';
 export async function members(c: Context, action: string, input: unknown) {
   if (action === 'member.save') {
     allow(c.role, ['OWNER', 'RECEPTION']);
@@ -17,6 +19,17 @@ export async function members(c: Context, action: string, input: unknown) {
       })
       .parse(input);
     ensure(!d.password || d.email, 'Para crear una contraseña, escribe el correo del cliente.');
+    if (!d.id) {
+      const tenant = await db.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
+      const memberLimit = planInfo(
+        effectivePlan(tenant.saasPlan, tenant.subscriptionExpiresAt),
+      ).maxMembers;
+      if (memberLimit !== null)
+        ensure(
+          (await db.member.count({ where: { tenantId: c.tenantId } })) < memberLimit,
+          `El plan Gratis permite hasta ${memberLimit} clientes. Cambia de plan para registrar más.`,
+        );
+    }
     let userId: string | undefined;
     if (!d.id && d.email && d.password) {
       const user = await provisionUser({ name: d.name, email: d.email, password: d.password });
@@ -24,6 +37,18 @@ export async function members(c: Context, action: string, input: unknown) {
     }
     return transaction(async (tx) => {
       if (d.id) await memberFor(tx, c, d.id);
+      else {
+        const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
+        const memberLimit = planInfo(
+          effectivePlan(tenant.saasPlan, tenant.subscriptionExpiresAt),
+        ).maxMembers;
+        if (memberLimit !== null) {
+          ensure(
+            (await tx.member.count({ where: { tenantId: c.tenantId } })) < memberLimit,
+            `El plan Gratis permite hasta ${memberLimit} clientes. Cambia de plan para registrar más.`,
+          );
+        }
+      }
       if (userId) {
         ensure(
           !(await tx.member.findFirst({ where: { tenantId: c.tenantId, userId } })),

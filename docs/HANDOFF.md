@@ -47,7 +47,7 @@ Limitaciones de validación: no se probó la cámara física de esta Mac/celular
 
 ## P2 · SaaS y escala
 
-- Panel de administrador global, suscripción del gimnasio al SaaS, límites de planes y facturación.
+- Panel de administrador global. Tarifas, cuotas y flujo de suscripción mensual de Mercado Pago están implementados en código; el plan se activa tras confirmar el pago por webhook o en el retorno. Sandbox comprobado localmente. Falta activar credenciales productivas, guardarlas en Vercel y verificar webhooks productivos antes de abrir cobros reales.
 - Subdominios/dominios por gimnasio; hoy selector de organización después de iniciar sesión.
 - Políticas RLS o integridad compuesta reforzada, carga y observabilidad.
 - Aplicación Expo solo si se decide distribuir en tiendas.

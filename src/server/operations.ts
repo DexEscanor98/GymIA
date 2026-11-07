@@ -36,6 +36,7 @@ const trainingActions = [
 ];
 const adminActions = [
   'tenant.save',
+  'tenant.plan',
   'branch.create',
   'staff.add',
   'staff.toggle',

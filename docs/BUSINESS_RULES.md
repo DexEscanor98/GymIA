@@ -45,3 +45,13 @@ Cierre manual de accesos pendientes marca salidas estimadas. Ocupación depende 
 ## Avisos
 
 El script de recordatorios genera avisos internos tres días antes de vencer, con deduplicación y comprobación de renovaciones. Para envío automático externo faltan proveedores y preferencias/consentimientos. El script no se ha programado aún en un servicio externo.
+
+## Suscripción de Gymia
+
+- Planes: Gratis; Lite ($139 MXN/mes, 1 sucursal); Básico ($350 MXN/mes, 2 sucursales); Estándar ($550 MXN/mes, hasta 6 sucursales); Premium ($850 MXN/mes, hasta 10 sucursales).
+- Gratis: 1 sucursal, 30 clientes, 5 productos y 3 empleados activos; no incluye notificaciones ni reportes/avisos de ocupación.
+- Lite quita los topes de clientes y productos, conserva 1 sucursal y permite hasta 3 empleados; no incluye reportes ni avisos avanzados. Básico, Estándar y Premium quitan los topes de clientes, productos y empleados y habilitan notificaciones push e historial de visitas por hora.
+- Las alertas automáticas de gimnasio vacío/saturado y el pronóstico de horas pico todavía no están implementados. El gráfico actual resume entradas registradas; no predice demanda.
+- Para más de 10 sucursales o necesidades especiales se solicita cotización.
+- Los planes de pago se cobran por Suscripciones de Mercado Pago con ciclo mensual. La app habilita el plan solo después de verificar con Mercado Pago la autorización y el primer pago aprobado, mediante webhook o al volver del checkout. El checkout recurrente actual ofrece los medios que Mercado Pago habilita para la suscripción; en sandbox mostró saldo y tarjetas, sin transferencia. Las transferencias manuales requerirán otro flujo de pago y confirmación antes de activar el plan.
+- El token de acceso debe pertenecer a la cuenta vendedora de Gymia; el saldo de cobros se deposita en esa cuenta sujeto a las comisiones/plazos de Mercado Pago. No se debe guardar el token en el repositorio ni compartirlo por chat.

@@ -11,6 +11,20 @@ enum Role {
   TRAINER
   CLIENT
 }
+enum SaasPlan {
+  FREE
+  LITE
+  BASIC
+  STANDARD
+  PREMIUM
+}
+enum SaasSubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  PAST_DUE
+  CANCELLED
+}
 enum MembershipStatus {
   ACTIVE
   FROZEN
@@ -90,6 +104,8 @@ model Tenant {
   logoUrl String?
   logo TenantLogo?
   timezone String @default("America/Mexico_City")
+  saasPlan SaasPlan @default(FREE)
+  subscriptionExpiresAt DateTime?
   capacity Int @default(80)
   comfortableCapacity Int @default(50)
   createdAt DateTime @default(now())
@@ -100,6 +116,38 @@ model Tenant {
   plans Plan[]
   shifts Shift[]
   pushSubscriptions PushSubscription[]
+  saasSubscriptions SaasSubscription[]
+}
+
+model SaasSubscription {
+  id                String                 @id @default(cuid())
+  tenantId          String
+  plan              SaasPlan
+  status            SaasSubscriptionStatus @default(PENDING)
+  amountCents       Int
+  externalReference String                 @unique
+  mpPreapprovalId   String?                @unique
+  checkoutUrl       String?
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  tenant            Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payments          SaasPayment[]
+
+  @@index([tenantId, status])
+}
+
+model SaasPayment {
+  id                String          @id @default(cuid())
+  subscriptionId    String
+  providerPaymentId String          @unique
+  amountCents       Int
+  status            String
+  approvedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  subscription      SaasSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, status])
 }
 model Access {
   id String @id @default(cuid())

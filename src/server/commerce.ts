@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { allow, cashTotals, DAY_MS, ensure } from '@/lib/domain';
 import { transaction, audit, openShift, memberFor } from './common';
 import type { Context } from './context';
+import { effectivePlan, planInfo } from '@/lib/saas-plans';
 const cents = z.number().int().min(0).max(100_000_000);
 const method = z.enum(['CASH', 'TRANSFER']);
 export async function commerce(c: Context, action: string, input: unknown) {
@@ -21,6 +22,18 @@ export async function commerce(c: Context, action: string, input: unknown) {
         ? await tx.product.findFirst({ where: { id: d.id, tenantId: c.tenantId } })
         : null;
       if (d.id) ensure(old, 'Producto no encontrado.', 404);
+      else {
+        const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
+        const productLimit = planInfo(
+          effectivePlan(tenant.saasPlan, tenant.subscriptionExpiresAt),
+        ).maxProducts;
+        if (productLimit !== null) {
+          ensure(
+            (await tx.product.count({ where: { tenantId: c.tenantId } })) < productLimit,
+            `El plan Gratis permite hasta ${productLimit} productos. Cambia de plan para registrar más.`,
+          );
+        }
+      }
       const data = { name: d.name, priceCents: d.priceCents, stock: d.stock };
       const product = old
         ? await tx.product.update({ where: { id: old.id }, data })

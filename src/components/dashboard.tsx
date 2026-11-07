@@ -31,6 +31,7 @@ import { es } from 'date-fns/locale/es';
 import { authClient } from '@/lib/auth-client';
 import { openStatus } from '@/lib/domain';
 import type { WorkspaceData, MemberData } from '@/lib/workspace-types';
+import { saasPlans } from '@/lib/saas-plans';
 import { useOperations } from './use-operations';
 import { OperationDialog } from './operation-dialog';
 import { QrScanner } from './qr-scanner';
@@ -101,8 +102,11 @@ function Avatar({ name }: { name: string }) {
     </span>
   );
 }
+const saasPlanKey = (value: string): keyof typeof saasPlans =>
+  value in saasPlans ? (value as keyof typeof saasPlans) : 'FREE';
 export function Dashboard({ user }: { user: { name: string; email: string } }) {
   const [w, setW] = useState<WorkspaceData | null>(null),
+    [selectedSaasPlan, setSelectedSaasPlan] = useState<keyof typeof saasPlans>('FREE'),
     [page, setPage] = useState<Page>('overview'),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
@@ -184,6 +188,52 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
       setToast(e instanceof Error ? e.message : 'No se pudo completar.');
     }
   }
+  async function startCheckout(plan: Exclude<keyof typeof saasPlans, 'FREE'>, tenantId: string) {
+    if (
+      w?.saasSubscriptions[0]?.status === 'ACTIVE' &&
+      w.tenant.saasPlan !== plan &&
+      !window.confirm(
+        'Al continuar se cancelará la renovación del plan actual y se abrirá un nuevo cobro. El plan nuevo se activará cuando Mercado Pago confirme el pago; el actual seguirá vigente hasta el fin de su periodo pagado. ¿Continuar?',
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, plan }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'No se pudo iniciar el pago.');
+      window.location.assign(result.initPoint);
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'No se pudo iniciar el pago.');
+      if (!w) await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function cancelPlan(tenantId: string) {
+    setBusy(true);
+    try {
+      const response = await fetch('/api/billing/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'No se pudo cancelar el plan.');
+      setToast(
+        'Renovación cancelada. El plan actual seguirá disponible hasta el final del periodo pagado.',
+      );
+      await load();
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'No se pudo cancelar el plan.');
+    } finally {
+      setBusy(false);
+    }
+  }
   async function showQr(member: MemberData) {
     const { toDataURL } = await import('qrcode');
     setQr({
@@ -223,6 +273,66 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
             Si eres empleado o cliente, comparte tu correo con recepción para que vincule tu cuenta.
             Si eres dueño, crea tu gimnasio.
           </p>
+          <div className="saas-plan-picker">
+            <h2>Elige el plan para tu gimnasio</h2>
+            <p className="muted">
+              Los planes de pago se contratan en Mercado Pago y se activan al confirmar el primer
+              pago.
+            </p>
+            <p className="muted">
+              Las alertas automáticas de gimnasio vacío o saturado y el pronóstico de horas pico aún
+              no están disponibles. El historial muestra las entradas registradas.
+            </p>
+            <div className="saas-plan-grid">
+              {(
+                Object.entries(saasPlans) as [
+                  keyof typeof saasPlans,
+                  (typeof saasPlans)[keyof typeof saasPlans],
+                ][]
+              ).map(([key, plan]) => (
+                <button
+                  className={`saas-plan-option ${selectedSaasPlan === key ? 'selected' : ''}`}
+                  type="button"
+                  key={key}
+                  aria-pressed={selectedSaasPlan === key}
+                  onClick={() => setSelectedSaasPlan(key)}
+                >
+                  <span className="saas-plan-name">{plan.name}</span>
+                  <strong>
+                    {plan.priceCents ? `$${(plan.priceCents / 100).toFixed(0)} MXN` : 'Gratis'}
+                  </strong>
+                  {plan.priceCents > 0 && <small>por mes</small>}
+                  <small>
+                    {plan.maxBranches} {plan.maxBranches === 1 ? 'sucursal' : 'sucursales'}
+                  </small>
+                  {key === 'FREE' ? (
+                    <small>30 clientes · 5 productos · 3 empleados · sin reportes ni avisos</small>
+                  ) : plan.paidFeatures ? (
+                    <small>
+                      Sin límite de clientes, productos y empleados · avisos de vencimiento e
+                      historial por hora
+                    </small>
+                  ) : (
+                    <small>
+                      Clientes y productos sin límite · hasta 3 empleados · sin avisos avanzados
+                    </small>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="muted">
+              ¿Necesitas más de 10 sucursales o un plan a la medida?{' '}
+              <a
+                href={`mailto:bytecservissoluciones@gmail.com?subject=${encodeURIComponent('Cotización Gymia para más de 10 sucursales')}`}
+              >
+                Solicita una cotización.
+              </a>
+            </p>
+            <p className="muted">
+              Las alertas automáticas de gimnasio vacío/saturado y el pronóstico de horas pico aún
+              no están implementados. El reporte actual resume las entradas registradas.
+            </p>
+          </div>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -232,10 +342,17 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                 const res = await fetch('/api/onboarding', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ name: fd.get('name'), slug: fd.get('slug') }),
+                  body: JSON.stringify({
+                    name: fd.get('name'),
+                    slug: fd.get('slug'),
+                  }),
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
+                if (selectedSaasPlan !== 'FREE') {
+                  await startCheckout(selectedSaasPlan, data.id);
+                  return;
+                }
                 await load();
               } catch (e) {
                 setError((e as Error).message);
@@ -293,7 +410,8 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
     staff = role === 'OWNER' || role === 'RECEPTION',
     owner = role === 'OWNER',
     client = role === 'CLIENT',
-    trainer = role === 'TRAINER';
+    trainer = role === 'TRAINER',
+    tenantPlan = saasPlans[saasPlanKey(w.tenant.saasPlan)];
   const nav = navigation.filter(([id]) =>
     staff
       ? owner || !['settings', 'team'].includes(id)
@@ -367,7 +485,10 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
           )}
           <div>
             <strong>{w.tenant.name}</strong>
-            <span>Espacio de {roles[role].toLowerCase()}</span>
+            <span>
+              Espacio de {roles[role].toLowerCase()}
+              {owner && ` · Plan ${saasPlans[saasPlanKey(w.tenant.saasPlan)].name}`}
+            </span>
           </div>
         </div>
         <span className="nav-caption">TU ESPACIO</span>
@@ -431,7 +552,7 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
             </span>
           </div>
           <div className="topbar-right">
-            {client && <PushNotifications tenantId={w.tenant.id} />}
+            {client && w.features.availability && <PushNotifications tenantId={w.tenant.id} />}
             {w.tenants.length > 1 && (
               <select
                 aria-label="Gimnasio"
@@ -490,15 +611,31 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                 </button>
               )}
               {page === 'members' && staff && (
-                <button className="button primary" onClick={() => op.member()}>
+                <button
+                  className="button primary"
+                  disabled={
+                    tenantPlan.maxMembers !== null && w.members.length >= tenantPlan.maxMembers
+                  }
+                  onClick={() => op.member()}
+                >
                   <Plus size={18} />
-                  Nuevo cliente
+                  {tenantPlan.maxMembers !== null && w.members.length >= tenantPlan.maxMembers
+                    ? 'Límite de clientes'
+                    : 'Nuevo cliente'}
                 </button>
               )}
               {page === 'products' && (
-                <button className="button primary" onClick={() => op.product()}>
+                <button
+                  className="button primary"
+                  disabled={
+                    tenantPlan.maxProducts !== null && w.products.length >= tenantPlan.maxProducts
+                  }
+                  onClick={() => op.product()}
+                >
                   <Plus size={18} />
-                  Nuevo producto
+                  {tenantPlan.maxProducts !== null && w.products.length >= tenantPlan.maxProducts
+                    ? 'Límite de productos'
+                    : 'Nuevo producto'}
                 </button>
               )}
               {page === 'plans' && staff && (
@@ -528,9 +665,21 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                 </button>
               )}
               {page === 'team' && owner && (
-                <button className="button primary" onClick={op.staff}>
+                <button
+                  className="button primary"
+                  disabled={
+                    tenantPlan.maxEmployees !== null &&
+                    w.accesses.filter((a) => a.active && ['RECEPTION', 'TRAINER'].includes(a.role))
+                      .length >= tenantPlan.maxEmployees
+                  }
+                  onClick={op.staff}
+                >
                   <Plus size={18} />
-                  Agregar empleado
+                  {tenantPlan.maxEmployees !== null &&
+                  w.accesses.filter((a) => a.active && ['RECEPTION', 'TRAINER'].includes(a.role))
+                    .length >= tenantPlan.maxEmployees
+                    ? 'Límite de empleados'
+                    : 'Agregar empleado'}
                 </button>
               )}
               {page === 'schedule' && owner && (
@@ -680,7 +829,7 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                     </div>
                     <Badge>Hoy</Badge>
                   </div>
-                  {staff ? (
+                  {staff && w.features.availability ? (
                     <>
                       <div className="chart">
                         {hourly.map((h) => (
@@ -702,7 +851,7 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                         <span>Las predicciones se incorporarán con más historial.</span>
                       </div>
                     </>
-                  ) : (
+                  ) : client && w.features.availability ? (
                     <div className="occupancy-block">
                       <strong>
                         {occupancy}
@@ -721,6 +870,14 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                           : 'Hay espacio para entrenar con comodidad.'}
                       </p>
                       <small>Estimación basada en entradas y salidas registradas.</small>
+                    </div>
+                  ) : (
+                    <div className="occupancy-block">
+                      <strong>Disponible en planes de pago</strong>
+                      <p>
+                        Activa notificaciones y consulta el historial de horas con más visitas. Las
+                        alertas automáticas de saturación aún están pendientes.
+                      </p>
                     </div>
                   )}
                 </section>
@@ -1576,6 +1733,129 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
               <section className="panel">
                 <div className="panel-heading">
                   <div>
+                    <h2>Plan de Gymia</h2>
+                    <p>
+                      El cobro mensual se procesa en Mercado Pago. Gymia activa el plan cuando el
+                      Webhook confirma el pago.
+                    </p>
+                    <p>
+                      Las alertas automáticas de gimnasio vacío o saturado y el pronóstico de horas
+                      pico aún no están disponibles. El historial muestra las entradas registradas.
+                    </p>
+                    {w.saasSubscriptions[0]?.status === 'ACTIVE' && (
+                      <p>
+                        Al cambiar de plan se cancela la renovación actual y el nuevo plan entra en
+                        vigor al confirmarse el pago.
+                      </p>
+                    )}
+                  </div>
+                  <Badge>{saasPlans[saasPlanKey(w.tenant.saasPlan)].name}</Badge>
+                </div>
+                <div className="saas-plan-grid settings-plans">
+                  {(
+                    Object.entries(saasPlans) as [
+                      keyof typeof saasPlans,
+                      (typeof saasPlans)[keyof typeof saasPlans],
+                    ][]
+                  ).map(([key, plan]) => (
+                    <article
+                      className={`saas-plan-option ${w.tenant.saasPlan === key ? 'selected' : ''}`}
+                      key={key}
+                    >
+                      <span className="saas-plan-name">{plan.name}</span>
+                      <strong>
+                        {plan.priceCents ? `$${(plan.priceCents / 100).toFixed(0)} MXN` : 'Gratis'}
+                      </strong>
+                      {plan.priceCents > 0 && <small>por mes</small>}
+                      <small>
+                        Hasta {plan.maxBranches}{' '}
+                        {plan.maxBranches === 1 ? 'sucursal' : 'sucursales'}
+                      </small>
+                      {key === 'FREE' ? (
+                        <small>
+                          30 clientes · 5 productos · 3 empleados · sin avisos ni reportes de
+                          ocupación
+                        </small>
+                      ) : plan.paidFeatures ? (
+                        <small>
+                          Clientes, productos y empleados ilimitados · avisos de vencimiento e
+                          historial por hora
+                        </small>
+                      ) : (
+                        <small>
+                          Clientes y productos sin límite · hasta 3 empleados · sin avisos avanzados
+                        </small>
+                      )}
+                      <button
+                        className={`button ${w.tenant.saasPlan === key ? 'secondary' : 'primary'} wide`}
+                        disabled={
+                          busy ||
+                          w.tenant.saasPlan === key ||
+                          (key === 'FREE' &&
+                            w.tenant.saasPlan !== 'FREE' &&
+                            w.saasSubscriptions[0]?.status === 'CANCELLED') ||
+                          (key !== 'FREE' &&
+                            ['PENDING', 'PAST_DUE'].includes(w.saasSubscriptions[0]?.status || ''))
+                        }
+                        onClick={() =>
+                          key === 'FREE' && w.tenant.saasPlan !== 'FREE'
+                            ? void cancelPlan(w.tenant.id)
+                            : key === 'FREE'
+                              ? void quick('tenant.plan', { saasPlan: key })
+                              : void startCheckout(key, w.tenant.id)
+                        }
+                      >
+                        {w.tenant.saasPlan === key
+                          ? 'Plan actual'
+                          : key === 'FREE'
+                            ? w.saasSubscriptions[0]?.status === 'CANCELLED'
+                              ? 'Renovación cancelada'
+                              : 'Cancelar renovación'
+                            : w.saasSubscriptions[0]?.status === 'ACTIVE'
+                              ? `Cambiar a ${plan.name}`
+                              : 'Pagar con Mercado Pago'}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+                {['PENDING', 'PAST_DUE'].includes(w.saasSubscriptions[0]?.status || '') && (
+                  <div className="list-row">
+                    <div>
+                      <strong>
+                        {w.saasSubscriptions[0]?.status === 'PENDING'
+                          ? 'Pago pendiente de confirmación'
+                          : 'No se pudo confirmar el pago'}
+                      </strong>
+                      <p>
+                        El plan se activa cuando Mercado Pago confirma el pago. La transferencia
+                        puede quedar pendiente mientras se acredita.
+                      </p>
+                    </div>
+                    {w.saasSubscriptions[0].checkoutUrl && (
+                      <a className="button secondary" href={w.saasSubscriptions[0].checkoutUrl}>
+                        Continuar pago
+                      </a>
+                    )}
+                    <button className="text-button" onClick={() => void cancelPlan(w.tenant.id)}>
+                      Cancelar pago pendiente
+                    </button>
+                  </div>
+                )}
+                {w.tenant.subscriptionExpiresAt && w.tenant.saasPlan !== 'FREE' && (
+                  <p className="muted" style={{ padding: '0 22px 16px' }}>
+                    Próxima fecha de cobro: {date(w.tenant.subscriptionExpiresAt, 'dd MMM yyyy')}.
+                  </p>
+                )}
+                <a
+                  className="text-button"
+                  href={`mailto:bytecservissoluciones@gmail.com?subject=${encodeURIComponent('Cotización Gymia para más de 10 sucursales')}`}
+                >
+                  Solicitar cotización para más de 10 sucursales o un plan a la medida
+                </a>
+              </section>
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
                     <h2>Identidad del gimnasio</h2>
                     <p>Nombre, color, logo y capacidad.</p>
                   </div>
@@ -1597,9 +1877,13 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
               <section className="panel">
                 <div className="panel-heading">
                   <h2>Sucursales</h2>
-                  <button className="button secondary" onClick={op.branch}>
+                  <button
+                    className="button secondary"
+                    disabled={w.branches.length >= tenantPlan.maxBranches}
+                    onClick={op.branch}
+                  >
                     <Plus size={17} />
-                    Agregar
+                    {w.branches.length >= tenantPlan.maxBranches ? 'Límite del plan' : 'Agregar'}
                   </button>
                 </div>
                 {w.branches.map((b) => (

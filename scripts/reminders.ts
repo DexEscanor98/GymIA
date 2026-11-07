@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { db } from '../src/lib/db';
 import { formatInTimeZone } from 'date-fns-tz';
 import webpush from 'web-push';
+import { planInfo } from '../src/lib/saas-plans';
 
 const pushEnabled = Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
 if (pushEnabled) {
@@ -15,6 +16,7 @@ if (pushEnabled) {
 let created = 0;
 let delivered = 0;
 for (const tenant of await db.tenant.findMany()) {
+  if (!planInfo(tenant.saasPlan).paidFeatures) continue;
   const day = formatInTimeZone(new Date(), tenant.timezone, 'yyyy-MM-dd');
   const [year, month, date] = day.split('-').map(Number);
   const target = new Date(Date.UTC(year, month - 1, date + 3)).toISOString().slice(0, 10);
