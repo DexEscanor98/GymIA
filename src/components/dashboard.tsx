@@ -37,6 +37,8 @@ import { OperationDialog } from './operation-dialog';
 import { QrScanner } from './qr-scanner';
 import { LogoUpload } from './logo-upload';
 import { PushNotifications } from './push-notifications';
+import { LegalCheckoutDialog } from './legal-checkout-dialog';
+import type { LegalAcceptanceInput } from '@/lib/legal-versions';
 import Link from 'next/link';
 const money = (c: number) =>
   new Intl.NumberFormat('es-MX', {
@@ -105,7 +107,13 @@ function Avatar({ name }: { name: string }) {
 }
 const saasPlanKey = (value: string): keyof typeof saasPlans =>
   value in saasPlans ? (value as keyof typeof saasPlans) : 'FREE';
-export function Dashboard({ user }: { user: { name: string; email: string } }) {
+export function Dashboard({
+  user,
+  legalCheckoutReady,
+}: {
+  user: { name: string; email: string };
+  legalCheckoutReady: boolean;
+}) {
   const [w, setW] = useState<WorkspaceData | null>(null),
     [selectedSaasPlan, setSelectedSaasPlan] = useState<keyof typeof saasPlans>('FREE'),
     [page, setPage] = useState<Page>('overview'),
@@ -121,6 +129,11 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
     [camera, setCamera] = useState(false),
     [scanDirection, setScanDirection] = useState<'enter' | 'exit'>('enter'),
     [qr, setQr] = useState<{ member: MemberData; url: string } | null>(null);
+  const [legalCheckout, setLegalCheckout] = useState<{
+    plan: Exclude<keyof typeof saasPlans, 'FREE'>;
+    tenantId?: string;
+  } | null>(null);
+  const [newGymDraft, setNewGymDraft] = useState<{ name: string; slug: string } | null>(null);
   const scanLock = useRef(false);
   const qrDialog = useRef<HTMLDialogElement>(null);
   const load = useCallback(async () => {
@@ -189,21 +202,17 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
       setToast(e instanceof Error ? e.message : 'No se pudo completar.');
     }
   }
-  async function startCheckout(plan: Exclude<keyof typeof saasPlans, 'FREE'>, tenantId: string) {
-    if (
-      w?.saasSubscriptions[0]?.status === 'ACTIVE' &&
-      w.tenant.saasPlan !== plan &&
-      !window.confirm(
-        'Al continuar se cancelará la renovación del plan actual y se abrirá un nuevo cobro. El plan nuevo se activará cuando Mercado Pago confirme el pago; el actual seguirá vigente hasta el fin de su periodo pagado. ¿Continuar?',
-      )
-    )
-      return;
+  async function startCheckout(
+    plan: Exclude<keyof typeof saasPlans, 'FREE'>,
+    tenantId: string,
+    acceptance: LegalAcceptanceInput,
+  ) {
     setBusy(true);
     try {
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId, plan }),
+        body: JSON.stringify({ tenantId, plan, acceptance }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'No se pudo iniciar el pago.');
@@ -211,6 +220,44 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
     } catch (e) {
       setToast(e instanceof Error ? e.message : 'No se pudo iniciar el pago.');
       if (!w) await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+  function requestPlanCheckout(plan: Exclude<keyof typeof saasPlans, 'FREE'>, tenantId?: string) {
+    if (
+      tenantId &&
+      w?.saasSubscriptions[0]?.status === 'ACTIVE' &&
+      w.tenant.saasPlan !== plan &&
+      !window.confirm(
+        'Al continuar se cancelará la renovación del plan actual y se abrirá un nuevo cobro. El plan nuevo se activará cuando Mercado Pago confirme el pago; el actual seguirá vigente hasta el fin de su periodo pagado. ¿Continuar?',
+      )
+    )
+      return;
+    setLegalCheckout({ plan, tenantId });
+  }
+  async function confirmLegalCheckout(acceptance: LegalAcceptanceInput) {
+    if (!legalCheckout) return;
+    setBusy(true);
+    try {
+      let tenantId = legalCheckout.tenantId;
+      if (!tenantId && newGymDraft) {
+        const createResponse = await fetch('/api/onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newGymDraft),
+        });
+        const created = await createResponse.json();
+        if (!createResponse.ok) throw new Error(created.error || 'No se pudo crear el gimnasio.');
+        tenantId = created.id;
+      }
+      if (!tenantId) throw new Error('No se encontró el gimnasio de la suscripción.');
+      setLegalCheckout(null);
+      setNewGymDraft(null);
+      await startCheckout(legalCheckout.plan, tenantId, acceptance);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo preparar el pago.');
+      await load();
     } finally {
       setBusy(false);
     }
@@ -340,20 +387,22 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
               setBusy(true);
               const fd = new FormData(e.currentTarget);
               try {
+                const gymDetails = {
+                  name: String(fd.get('name')),
+                  slug: String(fd.get('slug')),
+                };
+                if (selectedSaasPlan !== 'FREE') {
+                  setNewGymDraft(gymDetails);
+                  setLegalCheckout({ plan: selectedSaasPlan });
+                  return;
+                }
                 const res = await fetch('/api/onboarding', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    name: fd.get('name'),
-                    slug: fd.get('slug'),
-                  }),
+                  body: JSON.stringify(gymDetails),
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
-                if (selectedSaasPlan !== 'FREE') {
-                  await startCheckout(selectedSaasPlan, data.id);
-                  return;
-                }
                 await load();
               } catch (e) {
                 setError((e as Error).message);
@@ -387,7 +436,8 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
               />
             </label>
             <button className="button primary" disabled={busy}>
-              Crear mi gimnasio <ArrowRight size={17} />
+              {selectedSaasPlan === 'FREE' ? 'Crear mi gimnasio' : 'Continuar a contrato y pago'}{' '}
+              <ArrowRight size={17} />
             </button>
           </form>
           <div className="inline-actions">
@@ -405,6 +455,21 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
             </button>
           </div>
         </div>
+        {legalCheckout && (
+          <LegalCheckoutDialog
+            open
+            flow="GYM_SAAS"
+            planName={saasPlans[legalCheckout.plan].name}
+            price={(saasPlans[legalCheckout.plan].priceCents / 100).toFixed(0)}
+            released={legalCheckoutReady}
+            busy={busy}
+            onClose={() => {
+              setLegalCheckout(null);
+              setNewGymDraft(null);
+            }}
+            onConfirm={(acceptance) => void confirmLegalCheckout(acceptance)}
+          />
+        )}
       </main>
     );
   const role = w.context.role,
@@ -556,7 +621,7 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
             <Link className="text-button" href="/personal">
               Mi espacio personal
             </Link>
-            {client && w.features.availability && <PushNotifications tenantId={w.tenant.id} />}
+            {(client || owner) && w.features.availability && <PushNotifications tenantId={w.tenant.id} />}
             {w.tenants.length > 1 && (
               <select
                 aria-label="Gimnasio"
@@ -596,6 +661,12 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
           </div>
         </header>
         <main className="content">
+          {owner && w.appNotifications.length > 0 && (
+            <section className="app-renewal-notices" aria-label="Avisos de Gymia">
+              <strong>Avisos de Gymia</strong>
+              {w.appNotifications.map((item) => <p key={item.id}>{item.message}</p>)}
+            </section>
+          )}
           <div className="page-heading">
             <div>
               <span className="eyebrow">
@@ -1834,7 +1905,7 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                             ? void cancelPlan(w.tenant.id)
                             : key === 'FREE'
                               ? void quick('tenant.plan', { saasPlan: key })
-                              : void startCheckout(key, w.tenant.id)
+                              : requestPlanCheckout(key, w.tenant.id)
                         }
                       >
                         {w.tenant.saasPlan === key
@@ -1864,9 +1935,17 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
                       </p>
                     </div>
                     {w.saasSubscriptions[0].checkoutUrl && (
-                      <a className="button secondary" href={w.saasSubscriptions[0].checkoutUrl}>
+                      <button
+                        className="button secondary"
+                        onClick={() =>
+                          requestPlanCheckout(
+                            w.saasSubscriptions[0].plan as Exclude<keyof typeof saasPlans, 'FREE'>,
+                            w.tenant.id,
+                          )
+                        }
+                      >
                         Continuar pago
-                      </a>
+                      </button>
                     )}
                     <button className="text-button" onClick={() => void cancelPlan(w.tenant.id)}>
                       Cancelar pago pendiente
@@ -2033,6 +2112,18 @@ export function Dashboard({ user }: { user: { name: string; email: string } }) {
             de esta Mac se requiere publicar con HTTPS.
           </p>
         </dialog>
+      )}
+      {legalCheckout && (
+        <LegalCheckoutDialog
+          open
+          flow="GYM_SAAS"
+          planName={saasPlans[legalCheckout.plan].name}
+          price={(saasPlans[legalCheckout.plan].priceCents / 100).toFixed(0)}
+          released={legalCheckoutReady}
+          busy={busy}
+          onClose={() => setLegalCheckout(null)}
+          onConfirm={(acceptance) => void confirmLegalCheckout(acceptance)}
+        />
       )}
     </div>
   );

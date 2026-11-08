@@ -11,11 +11,15 @@ export function AuthForm({
   gymOwner?: boolean;
 }) {
   const [error, setError] = useState(''),
+    [notice, setNotice] = useState(''),
+    [verificationEmail, setVerificationEmail] = useState(''),
     [busy, setBusy] = useState(false);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError('');
+    setNotice('');
+    setVerificationEmail('');
     const data = new FormData(e.currentTarget);
     try {
       const body = {
@@ -23,14 +27,26 @@ export function AuthForm({
         password: String(data.get('password')),
       };
       const result = register
-        ? await authClient.signUp.email({ ...body, name: String(data.get('name')) })
+        ? await authClient.signUp.email({
+            ...body,
+            name: String(data.get('name')).trim(),
+            phoneNumber: String(data.get('phoneNumber')).trim(),
+            callbackURL: '/verify-account',
+          } as never)
         : await authClient.signIn.email(body);
       if (result.error) {
+        if (!register && result.error.status === 403) setVerificationEmail(body.email);
         setError(
           register
             ? 'No se pudo crear la cuenta. Revisa los datos o prueba iniciar sesión.'
-            : 'Correo o contraseña incorrectos.',
+            : result.error.status === 403
+              ? 'Confirma tu correo desde el mensaje que te enviamos y vuelve a iniciar sesión.'
+              : 'Correo o contraseña incorrectos.',
         );
+        return;
+      }
+      if (register) {
+        window.location.assign(`/verify-account?email=${encodeURIComponent(body.email)}`);
         return;
       }
       window.location.assign(register ? (gymOwner ? '/setup-gym' : '/personal') : '/');
@@ -85,6 +101,21 @@ export function AuthForm({
                 <input name="name" required minLength={2} autoComplete="name" />
               </label>
             )}
+            {register && (
+              <label>
+                Teléfono móvil con código de país
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  required
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="+52 55 1234 5678"
+                  pattern="\+[1-9][0-9]{7,14}"
+                  title="Incluye el signo + y el código de país. Ejemplo: +525512345678"
+                />
+              </label>
+            )}
             <label>
               Correo electrónico
               <input
@@ -109,6 +140,16 @@ export function AuthForm({
             {error && (
               <p className="form-error" role="alert">
                 {error}
+              </p>
+            )}
+            {verificationEmail && (
+              <Link className="text-button" href={`/verify-account?email=${encodeURIComponent(verificationEmail)}`}>
+                Ir a verificar mi correo
+              </Link>
+            )}
+            {notice && (
+              <p className="form-success" role="status">
+                {notice}
               </p>
             )}
             <button className="button primary wide" disabled={busy}>

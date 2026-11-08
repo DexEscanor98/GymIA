@@ -1146,6 +1146,114 @@ td .text-button {
   border-top: 1px solid var(--line);
   padding-top: 20px;
 }
+.legal-checkout-dialog {
+  width: min(760px, calc(100% - 28px));
+  max-width: 760px;
+  padding: clamp(20px, 4vw, 34px);
+}
+.legal-checkout-dialog .dialog-head h2 {
+  margin: 3px 0 0;
+}
+.legal-order-summary {
+  display: grid;
+  gap: 6px;
+  padding: 17px 19px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffffb8;
+}
+.legal-order-summary > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+.legal-order-summary > strong {
+  font-size: 26px;
+  letter-spacing: -0.035em;
+}
+.legal-order-summary > strong small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+.legal-order-summary p {
+  margin: 1px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.legal-doc-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 16px 0;
+}
+.legal-doc-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: #315a48;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.legal-doc-links a:hover {
+  background: #eef3ef;
+}
+.legal-consent-list {
+  display: grid;
+  gap: 2px;
+  max-height: 36dvh;
+  overflow: auto;
+  padding: 4px 2px;
+}
+.legal-consent-list label {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 11px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  color: #374354;
+  font-size: 14px;
+  line-height: 1.55;
+  cursor: pointer;
+}
+.legal-consent-list label:hover {
+  background: #ffffff8a;
+}
+.legal-consent-list input[type='checkbox'] {
+  width: 19px;
+  height: 19px;
+  min-height: auto;
+  margin: 1px 0 0;
+  accent-color: #315a48;
+}
+.legal-release-notice {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #e7ce9a;
+  border-radius: 12px;
+  background: #fff9ec;
+  color: #6e531f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.legal-checkout-dialog .dialog-actions .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+@media (max-width: 620px) {
+  .legal-checkout-dialog .dialog-actions {
+    flex-direction: column-reverse;
+  }
+  .legal-checkout-dialog .dialog-actions .button {
+    width: 100%;
+  }
+}
 .form-error {
   background: #fbebe7;
   color: #9c453a;
@@ -1154,6 +1262,88 @@ td .text-button {
   border-radius: 8px;
   font-size: 13px;
   margin: 14px 0;
+}
+.form-success {
+  background: #edf7ef;
+  color: #315b3d;
+  border: 1px solid #cfe3d2;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin: 14px 0;
+}
+.form-hint {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.verification-content {
+  min-height: 100dvh;
+  padding: 32px 20px;
+  display: grid;
+  place-items: center;
+}
+.verification-content .auth-card {
+  max-width: 480px;
+  padding: clamp(24px, 5vw, 42px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 24px 70px rgba(30, 38, 48, 0.1);
+  backdrop-filter: blur(24px);
+}
+.verification-content .auth-card > p {
+  line-height: 1.55;
+}
+.verification-status {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0 26px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.verification-status p {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.verification-cancellations {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.verification-cancellations p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.verification-complete {
+  display: grid;
+  gap: 16px;
+}
+.app-renewal-notices {
+  margin: 0 0 22px;
+  padding: 16px 20px;
+  border: 1px solid #d9e5dc;
+  border-radius: 16px;
+  background: rgba(246, 250, 247, 0.92);
+  color: #324d39;
+}
+.app-renewal-notices strong {
+  display: block;
+  margin-bottom: 5px;
+}
+.app-renewal-notices p {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 .toast {
   position: fixed;

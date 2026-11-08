@@ -4,7 +4,13 @@ import { db } from '@/lib/db';
 import { planInfo } from '@/lib/saas-plans';
 import { ensure } from '@/lib/domain';
 import { context } from '@/server/context';
+import { assertMercadoPagoSandboxAccount, isSandboxPayments, paymentPayerEmail } from '@/server/payments';
 import { errorResponse, json, readBody, sameOrigin } from '@/server/http';
+import {
+  legalAcceptanceSchema,
+  billingCheckoutIsConfigured,
+  saveSubscriptionAcceptance,
+} from '@/server/legal-acceptance';
 
 const paidPlan = z.enum(['LITE', 'BASIC', 'STANDARD', 'PREMIUM']);
 
@@ -12,13 +18,19 @@ export async function POST(request: Request) {
   try {
     sameOrigin(request);
     const input = z
-      .object({ tenantId: z.string().min(1), plan: paidPlan })
+      .object({ tenantId: z.string().min(1), plan: paidPlan, acceptance: legalAcceptanceSchema })
       .parse(await readBody(request));
     const c = await context(input.tenantId);
     ensure(c.role === 'OWNER', 'Solo el dueño puede cambiar el plan.', 403);
+    ensure(
+      billingCheckoutIsConfigured(),
+      'El checkout requiere las credenciales de Mercado Pago de producción y su firma de Webhooks.',
+      503,
+    );
 
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     ensure(accessToken, 'Mercado Pago todavía no está configurado en el servidor.', 503);
+    if (isSandboxPayments()) await assertMercadoPagoSandboxAccount(accessToken);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL;
     ensure(baseUrl, 'Falta configurar la URL pública segura del sitio.', 503);
     const tenant = await db.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
@@ -48,9 +60,18 @@ export async function POST(request: Request) {
         : 'Ya hay un pago pendiente. Continúa ese pago o cancélalo antes de elegir otro plan.',
       409,
     );
+    const externalReference = prior?.checkoutUrl ? prior.externalReference : randomUUID();
+    await saveSubscriptionAcceptance({
+      accepted: input.acceptance,
+      userId: c.userId,
+      tenantId: tenant.id,
+      subscriptionReference: externalReference,
+      flow: 'GYM_SAAS',
+      plan: input.plan,
+      amountCents: details.priceCents,
+    });
     if (prior?.checkoutUrl) return json({ initPoint: prior.checkoutUrl });
 
-    const externalReference = randomUUID();
     const subscription = await db.saasSubscription.create({
       data: {
         tenantId: tenant.id,
@@ -64,10 +85,7 @@ export async function POST(request: Request) {
       where: { tenantId: tenant.id, userId: c.userId, role: 'OWNER' },
       include: { user: { select: { email: true } } },
     });
-    const payerEmail =
-      process.env.NODE_ENV !== 'production'
-        ? process.env.MERCADOPAGO_TEST_PAYER_EMAIL || owner.user.email
-        : owner.user.email;
+    const payerEmail = paymentPayerEmail(owner.user.email);
     const response = await fetch('https://api.mercadopago.com/preapproval', {
       method: 'POST',
       headers: {

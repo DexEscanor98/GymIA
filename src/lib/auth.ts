@@ -1,9 +1,35 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { db } from './db';
+import { sendTransactionalEmail } from '@/server/email';
+const escapeHtml = (value: string) =>
+  value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 export const auth = betterAuth({
   database: prismaAdapter(db, { provider: 'postgresql' }),
+  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
+  // Keep sign-in available so legacy accounts can reach the verification screen.
+  // Product APIs and onboarding accept either verified email or verified phone.
   emailAndPassword: { enabled: true, minPasswordLength: 12 },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendTransactionalEmail({
+        to: user.email,
+        subject: 'Confirma tu correo para Gymia',
+        text: `Confirma tu correo abriendo este enlace: ${url}\n\nEl enlace vence en una hora. Si no solicitaste la cuenta, ignora este mensaje.`,
+        html: `<p>Confirma tu correo para continuar en Gymia.</p><p><a href="${escapeHtml(url)}">Verificar mi correo</a></p><p>El enlace vence en una hora. Si no solicitaste la cuenta, ignora este mensaje.</p>`,
+      });
+    },
+  },
+  user: {
+    additionalFields: {
+      phoneNumber: { type: 'string', required: false, input: true },
+      phoneNumberVerified: { type: 'boolean', required: false, defaultValue: false, input: false },
+      pendingPhoneNumber: { type: 'string', required: false, input: false },
+    },
+  },
   rateLimit: { enabled: true, window: 60, max: 40, storage: 'database' },
   trustedOrigins: [
     process.env.BETTER_AUTH_URL || 'http://localhost:3000',

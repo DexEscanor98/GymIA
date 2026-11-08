@@ -54,6 +54,9 @@ model User {
   name String
   email String @unique
   emailVerified Boolean @default(false)
+  phoneNumber String?
+  phoneNumberVerified Boolean @default(false)
+  pendingPhoneNumber String?
   image String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -128,6 +131,29 @@ model Tenant {
   shifts Shift[]
   pushSubscriptions PushSubscription[]
   saasSubscriptions SaasSubscription[]
+}
+
+// Immutable evidence of terms and subscription consent. References intentionally remain
+// plain identifiers so deleting an account/tenant cannot erase the acceptance audit trail.
+model LegalAcceptance {
+  id                    String   @id @default(cuid())
+  userId                String
+  tenantId              String?
+  subscriptionReference String
+  flow                  String
+  documentType          String
+  documentVersion       String
+  documentUrl           String
+  plan                  String
+  amountCents           Int
+  currency              String   @default("MXN")
+  billingInterval       String   @default("MONTHLY")
+  acceptedAt            DateTime @default(now())
+  evidence              Json
+
+  @@index([userId, acceptedAt])
+  @@index([tenantId, acceptedAt])
+  @@index([subscriptionReference])
 }
 
 model SaasSubscription {
@@ -377,6 +403,19 @@ model Notification {
   readAt DateTime?
   pushSentAt DateTime?
   @@index([tenantId,memberId])
+}
+model AppNotification {
+  id String @id @default(cuid())
+  userId String
+  tenantId String?
+  kind String
+  message String
+  dedupeKey String @unique
+  createdAt DateTime @default(now())
+  readAt DateTime?
+  pushSentAt DateTime?
+  @@index([userId, createdAt])
+  @@index([tenantId, createdAt])
 }
 model PushSubscription {
   id String @id @default(cuid())

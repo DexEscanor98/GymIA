@@ -41,6 +41,7 @@ export async function workspace(c: Context, reportDay?: string) {
     freezeRequests,
     logs,
     notifications,
+    appNotifications,
     stockMovements,
     tenants,
     saasSubscriptions,
@@ -135,6 +136,13 @@ export async function workspace(c: Context, reportDay?: string) {
           take: 50,
         })
       : [],
+    c.role === 'OWNER'
+      ? db.appNotification.findMany({
+          where: { userId: c.userId, tenantId: c.tenantId, readAt: null },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        })
+      : [],
     staff
       ? db.stockMovement.findMany({
           where: { tenantId: c.tenantId },
@@ -204,6 +212,7 @@ export async function workspace(c: Context, reportDay?: string) {
     freezeRequests,
     logs,
     notifications,
+    appNotifications,
     stockMovements,
     occupancy,
     reportDay: day,

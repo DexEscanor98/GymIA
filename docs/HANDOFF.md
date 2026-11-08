@@ -22,7 +22,7 @@ Limitaciones de validación: no se probó la cámara física de esta Mac/celular
 
 ## P0 · Antes de un piloto con datos reales
 
-1. **Identidad:** verificación de correo, recuperación de contraseña y flujo de invitación/verificación antes de vincular clientes/empleados. Hoy se vinculan por correo existente tras comprobación humana; no usar como identidad verificada automáticamente.
+1. **Verificación de cuenta:** Brevo está configurado para correo en Production y Preview. Basta confirmar correo o teléfono para usar la app; Twilio Verify solo es necesario si se desea ofrecer SMS como alternativa.
 2. **Operación en nube:** PostgreSQL administrado, secretos reales, dominio HTTPS, respaldos/restauración y monitoreo. Configurar límites de tamaño de solicitud en proxy/hosting además del límite de aplicación. Revisar roles de DB y aislamiento reforzado.
 3. **Pagos pendientes:** la regla de bloqueo existe; falta interfaz para crear adeudos y liquidarlos. Las ventas actuales se consideran pagadas y no hay pagos parciales.
 4. **Integridad y concurrencia:** ampliar cobertura para dos operadores concurrentes, turnos que cruzan días, cambios de zona y cambio de entrenador con citas futuras. El bloqueo de asesores debe invalidar/reasignar citas.
@@ -32,8 +32,8 @@ Limitaciones de validación: no se probó la cámara física de esta Mac/celular
 
 ## P1 · Completar el producto acordado
 
-- Proveedor de correo y WhatsApp Business, y gestión de consentimiento/preferencias para esos canales. Web push ya tiene opt-in, almacenamiento de suscripción y entrega VAPID.
-- Programar `jobs:reminders` diariamente en el hosting para materializar recordatorios y entregar push; la app no ejecuta un scheduler residente.
+- Proveedor de WhatsApp Business y gestión de consentimiento/preferencias para sus mensajes. Web push ya tiene opt-in y almacenamiento VAPID.
+- Revisar en el proyecto Vercel que se haya registrado el cron diario de renovación del SaaS (ver `vercel.json`) y configurar `CRON_SECRET`; en el plan Hobby la tarea se limita a una ejecución diaria.
 - Avisos de apertura/cierre/cambios extraordinarios. Modelo inicial de horarios de un intervalo; ampliar horarios partidos y nocturnos.
 - Predicción de horas concurridas: hay gráfico descriptivo e historial, no pronóstico ni inteligencia artificial. Medir calidad de salidas antes de pronosticar.
 - Disponibilidad de entrenadores, duración/configuración de sesiones y preferencia de género del entrenador. Hoy hay selección manual consentida, no asignación automática.
@@ -47,7 +47,7 @@ Limitaciones de validación: no se probó la cámara física de esta Mac/celular
 
 ## P2 · SaaS y escala
 
-- Panel de administrador global. Tarifas, cuotas y flujo de suscripción mensual de Mercado Pago están implementados en código; el plan se activa tras confirmar el pago por webhook o en el retorno. Sandbox comprobado localmente. Falta activar credenciales productivas, guardarlas en Vercel y verificar webhooks productivos antes de abrir cobros reales.
+- Panel de administrador global. Tarifas, cuotas y flujo de suscripción mensual de Mercado Pago están implementados; el plan se activa tras confirmar el pago por webhook o en el retorno. Production conserva sus credenciales reales configuradas. Antes del checkout, el usuario debe aceptar los documentos y el consentimiento de renovación.
 - Subdominios/dominios por gimnasio; hoy selector de organización después de iniciar sesión.
 - Políticas RLS o integridad compuesta reforzada, carga y observabilidad.
 - Aplicación Expo solo si se decide distribuir en tiendas.
@@ -69,3 +69,11 @@ Se agregó registro/cuenta personal sin gimnasio y acceso separado en `/personal
 El espacio personal incluye perfil y metas de macros, plan de alimentación editable, comidas, notas, rutinas, agenda y asistente con respuestas guiadas locales. Gratis: hasta 4 rutinas, 7 días de comidas y 30 sesiones visibles. Gymia Plus: precio sugerido de lanzamiento $99 MXN/mes, rutinas ilimitadas e historial de 90 días de comidas/300 sesiones. Mercado Pago activa Plus al confirmar importe y pago aprobado por webhook o conciliación; cancelar detiene renovación y mantiene el periodo pagado. El formulario de interés de nutriólogo no cobra y no reserva una consulta; falta integrar profesionales reales. El asistente no usa un LLM externo.
 
 La migración `20261107000000_personal_space` crea perfil e historiales personales y se aplica junto a las migraciones existentes en el build de Vercel. Pendiente: validar en Vercel que el entorno de producción tiene `DATABASE_URL`/`DATABASE_URL_POOLED`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET` y URL pública; probar una compra Plus en sandbox/prod según las credenciales activas y verificar el webhook. No incluir secretos en Git.
+
+## Contratos y consentimiento para pagos · 7 de noviembre de 2026
+
+Se redactaron borradores editables en `docs/legal/v1/` para el contrato SaaS con gimnasios (incluye anexo de tratamiento), el contrato Plus personal, Términos y Condiciones y Aviso Integral de Privacidad. Se generan páginas HTML versionadas para lectura desde el checkout. Owner SaaS y Plus personal muestran casillas separadas para contrato, términos, aviso y autorización expresa mensual; aceptar registra usuario, tenant si aplica, plan, importe, referencia, versiones y hora UTC antes del enlace de Mercado Pago. El botón no se habilita mientras falten aceptaciones.
+
+Los documentos v1.2 reflejan los datos del proveedor y se presentan antes de iniciar el checkout. La API exige casillas separadas y conserva evidencia versionada de la aceptación; las credenciales de Mercado Pago ya configuradas determinan la disponibilidad del pago. No cambies las credenciales reales de Production al preparar una demostración sandbox. Brevo permite verificar correo; Twilio es opcional para la verificación telefónica. El cron requiere `CRON_SECRET`. Cada cambio legal debe crear otra ruta/versión y conservar la anterior.
+
+El vencimiento de los planes requiere una tarea operativa: el artículo 76 Bis reformado exige aviso de renovación automática con cinco días naturales y cancelación inmediata sin penalización. Hoy la app no garantiza por sí sola que una notificación externa de renovación se haya entregado; configurar y comprobar el scheduler/canal antes de ofrecerlo como operativo. La aceptación de un checkbox no sustituye la revisión profesional de estos textos ni el aviso de privacidad específico de cada gimnasio.

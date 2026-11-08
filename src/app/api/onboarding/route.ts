@@ -4,11 +4,13 @@ import { auth } from '@/lib/auth';
 import { transaction } from '@/server/common';
 import { ensure } from '@/lib/domain';
 import { json, errorResponse, sameOrigin, readBody } from '@/server/http';
+import { requireVerifiedContacts } from '@/server/verified-contacts';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
     const session = await auth.api.getSession({ headers: await headers() });
     ensure(session, 'Inicia sesión.', 401);
+    await requireVerifiedContacts(session.user.id);
     const d = z
       .object({
         name: z.string().trim().min(2).max(80),

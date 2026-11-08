@@ -20,6 +20,14 @@ for (const [email, name, role] of definitions) {
     const result = await auth.api.signUpEmail({ body: { email, name, password } });
     user = await db.user.findUniqueOrThrow({ where: { id: result.user.id } });
   }
+  user = await db.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerified: true,
+      phoneNumber: `+52550000000${definitions.findIndex(([demoEmail]) => demoEmail === email) + 1}`,
+      phoneNumberVerified: true,
+    },
+  });
   users.push({ ...user, role });
 }
 if (await db.tenant.findUnique({ where: { slug: 'demo-gym' } })) {

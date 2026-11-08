@@ -5,11 +5,13 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { ensure } from '@/lib/domain';
 import { errorResponse, json, readBody, sameOrigin } from '@/server/http';
+import { requireVerifiedContacts } from '@/server/verified-contacts';
 
 const profileId = () => `GYM-${randomBytes(10).toString('hex').toUpperCase()}`;
 async function ownedProfile() {
   const session = await auth.api.getSession({ headers: await headers() });
   ensure(session, 'Inicia sesión para continuar.', 401);
+  await requireVerifiedContacts(session.user.id);
   const profile = await db.athleteProfile.upsert({
     where: { userId: session.user.id },
     create: { userId: session.user.id, publicId: profileId() },
@@ -35,7 +37,7 @@ export async function GET() {
           data: { personalPlan: 'FREE' },
         });
     }
-    const [notes, routines, workouts, meals, messages, requests, subscription, gymLinks] =
+    const [notes, routines, workouts, meals, messages, requests, subscription, gymLinks, appNotifications] =
       await Promise.all([
         db.athleteNote.findMany({
           where: { profileId: profile.id },
@@ -78,6 +80,11 @@ export async function GET() {
           where: { userId: session.user.id, active: true },
           select: { role: true, tenant: { select: { id: true, name: true, slug: true } } },
         }),
+        db.appNotification.findMany({
+          where: { userId: session.user.id, tenantId: null, readAt: null },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        }),
       ]);
     const freshProfile =
       profile.personalPlan === 'COACH' &&
@@ -97,6 +104,7 @@ export async function GET() {
       requests,
       subscription,
       gymLinks,
+      appNotifications,
     });
   } catch (error) {
     return errorResponse(error);

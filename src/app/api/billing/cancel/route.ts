@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     sameOrigin(request);
     const { tenantId } = z.object({ tenantId: z.string().min(1) }).parse(await readBody(request));
-    const c = await context(tenantId);
+    const c = await context(tenantId, { requireVerifiedContacts: false });
     ensure(c.role === 'OWNER', 'Solo el dueño puede gestionar el plan.', 403);
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
     ensure(token, 'Mercado Pago todavía no está configurado en el servidor.', 503);

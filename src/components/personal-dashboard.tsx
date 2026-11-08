@@ -16,6 +16,8 @@ import {
   UserRound,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
+import { LegalCheckoutDialog } from './legal-checkout-dialog';
+import type { LegalAcceptanceInput } from '@/lib/legal-versions';
 
 type Payload = {
   user: { name: string; email: string };
@@ -61,6 +63,7 @@ type Payload = {
     currentPeriodEnd?: string | null;
   } | null;
   gymLinks: { role: string; tenant: { id: string; name: string } }[];
+  appNotifications: { id: string; message: string; createdAt: string }[];
 };
 const peso = new Intl.NumberFormat('es-MX', {
   style: 'currency',
@@ -68,12 +71,19 @@ const peso = new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
 });
 
-export function PersonalDashboard({ user }: { user: { name: string; email: string } }) {
+export function PersonalDashboard({
+  user,
+  legalCheckoutReady,
+}: {
+  user: { name: string; email: string };
+  legalCheckoutReady: boolean;
+}) {
   const [data, setData] = useState<Payload | null>(null),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
     [busy, setBusy] = useState(false),
-    [copied, setCopied] = useState(false);
+    [copied, setCopied] = useState(false),
+    [legalCheckoutOpen, setLegalCheckoutOpen] = useState(false);
   const load = useCallback(async () => {
     const response = await fetch('/api/personal', { cache: 'no-store' });
     const payload = await response.json();
@@ -151,14 +161,14 @@ export function PersonalDashboard({ user }: { user: { name: string; email: strin
       setBusy(false);
     }
   };
-  const checkout = async () => {
+  const checkout = async (acceptance: LegalAcceptanceInput) => {
     setBusy(true);
     setError('');
     try {
       const r = await fetch('/api/personal/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ acceptance }),
       });
       const x = await r.json();
       if (!r.ok) throw new Error(x.error || 'No se pudo iniciar el pago.');
@@ -230,6 +240,12 @@ export function PersonalDashboard({ user }: { user: { name: string; email: strin
           </button>
         </div>
       </header>
+      {data.appNotifications.length > 0 && (
+        <section className="app-renewal-notices" aria-label="Avisos de Gymia">
+          <strong>Avisos de Gymia</strong>
+          {data.appNotifications.map((item) => <p key={item.id}>{item.message}</p>)}
+        </section>
+      )}
       <section className="personal-hero">
         <div>
           <span className="eyebrow">TU ESPACIO DE ENTRENAMIENTO</span>
@@ -468,7 +484,7 @@ export function PersonalDashboard({ user }: { user: { name: string; email: strin
             Rutinas ilimitadas e historial ampliado. Cancela la renovación cuando quieras.
           </p>
           {data.profile.personalPlan === 'FREE' ? (
-            <button className="button primary" disabled={busy} onClick={() => void checkout()}>
+            <button className="button primary" disabled={busy} onClick={() => setLegalCheckoutOpen(true)}>
               Continuar con Mercado Pago
             </button>
           ) : (
@@ -585,6 +601,16 @@ export function PersonalDashboard({ user }: { user: { name: string; email: strin
         Tu cuenta personal es tuya. Comparte el ID Gymia únicamente con el gimnasio que quieras
         vincular.
       </footer>
+      <LegalCheckoutDialog
+        open={legalCheckoutOpen}
+        flow="PERSONAL_PLUS"
+        planName="Gymia Plus personal"
+        price="99"
+        released={legalCheckoutReady}
+        busy={busy}
+        onClose={() => setLegalCheckoutOpen(false)}
+        onConfirm={(acceptance) => void checkout(acceptance)}
+      />
     </main>
   );
 }

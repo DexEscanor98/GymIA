@@ -98,6 +98,11 @@ export async function members(c: Context, action: string, input: unknown) {
         404,
       );
       const user = profile.user;
+      ensure(
+        user.emailVerified || user.phoneNumberVerified,
+        'Pide al cliente que confirme su correo o teléfono antes de vincular su cuenta.',
+        403,
+      );
       const access = await tx.access.findUnique({
         where: { tenantId_userId: { tenantId: c.tenantId, userId: user.id } },
       });

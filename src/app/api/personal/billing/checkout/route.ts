@@ -1,16 +1,32 @@
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { ensure } from '@/lib/domain';
-import { errorResponse, json, sameOrigin } from '@/server/http';
+import { errorResponse, json, readBody, sameOrigin } from '@/server/http';
+import {
+  legalAcceptanceSchema,
+  billingCheckoutIsConfigured,
+  saveSubscriptionAcceptance,
+} from '@/server/legal-acceptance';
+import { requireVerifiedContacts } from '@/server/verified-contacts';
+import { assertMercadoPagoSandboxAccount, isSandboxPayments, paymentPayerEmail } from '@/server/payments';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
+    const input = z.object({ acceptance: legalAcceptanceSchema }).parse(await readBody(request));
     const session = await auth.api.getSession({ headers: await headers() });
     ensure(session, 'Inicia sesión para continuar.', 401);
+    await requireVerifiedContacts(session.user.id);
+    ensure(
+      billingCheckoutIsConfigured(),
+      'El checkout requiere las credenciales de Mercado Pago y su firma de Webhooks.',
+      503,
+    );
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
     ensure(token, 'Mercado Pago no está configurado.', 503);
+    if (isSandboxPayments()) await assertMercadoPagoSandboxAccount(token);
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || new URL(request.url).origin;
     const profile = await db.athleteProfile.upsert({
@@ -37,8 +53,6 @@ export async function POST(request: Request) {
       'Ya tienes Gymia Plus activo.',
       409,
     );
-    if (current?.status === 'PENDING' && current.checkoutUrl)
-      return json({ initPoint: current.checkoutUrl });
     ensure(
       !current || !['ACTIVE', 'CANCELLED'].includes(current.status),
       current?.status === 'CANCELLED'
@@ -46,7 +60,21 @@ export async function POST(request: Request) {
         : 'Gymia Plus ya está activo.',
       409,
     );
-    const externalReference = randomUUID();
+    const externalReference =
+      current?.status === 'PENDING' && current.checkoutUrl
+        ? current.externalReference
+        : randomUUID();
+    await saveSubscriptionAcceptance({
+      accepted: input.acceptance,
+      userId: session.user.id,
+      subscriptionReference: externalReference,
+      flow: 'PERSONAL_PLUS',
+      plan: 'GYMIA_PLUS',
+      amountCents: 9900,
+    });
+    if (current?.status === 'PENDING' && current.checkoutUrl)
+      return json({ initPoint: current.checkoutUrl });
+
     const subscription = await db.athleteSubscription.create({
       data: { profileId: profile.id, amountCents: 9900, externalReference },
     });
@@ -61,7 +89,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         reason: 'Gymia Plus personal',
         external_reference: externalReference,
-        payer_email: session.user.email,
+        payer_email: paymentPayerEmail(session.user.email),
         auto_recurring: {
           frequency: 1,
           frequency_type: 'months',

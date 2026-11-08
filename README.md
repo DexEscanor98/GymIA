@@ -2,7 +2,7 @@
 
 Primera base funcional de un SaaS para gimnasios. Aplicación web instalable (PWA), en español, con datos en PostgreSQL y permisos por organización.
 
-**Estado:** desarrollo local funcional; aún no publicar para clientes reales sin completar las tareas P0 de [entrega](docs/HANDOFF.md). No es una maqueta: las operaciones implementadas persisten en PostgreSQL. No incluye proveedores de correo/WhatsApp/push ni cobro del SaaS.
+**Estado:** versión demostrativa desplegable con PostgreSQL, aceptación de documentos antes del checkout y cobros recurrentes procesados por Mercado Pago. Los pagos se habilitan con las credenciales de producción configuradas; cada comprador debe aceptar el contrato, los términos, el aviso de privacidad y el cobro recurrente antes de salir al checkout. Para continuar en la app basta verificar el correo o el teléfono.
 
 ## Inicio rápido en Mac M1/M2/M3 o cualquier entorno Node compatible
 
@@ -51,7 +51,7 @@ Las seis personas, cuatro productos, tres planes y dos sucursales iniciales son 
 
 ## Qué funciona
 
-- Registro e inicio/cierre de sesión con Better Auth. Creación de organizaciones.
+- Registro e inicio/cierre de sesión con Better Auth. El correo se verifica mediante enlace y el teléfono por código SMS; el acceso a operaciones requiere verificar al menos uno de los dos canales.
 - Dueño y recepción pueden registrar clientes con contraseña inicial; el dueño puede registrar empleados y crear su cuenta en el mismo flujo.
 - Cambio entre gimnasios autorizados; permisos comprobados en el servidor.
 - Dueño, recepción, entrenador y cliente con vistas y alcance diferentes.
@@ -70,8 +70,8 @@ Las seis personas, cuatro productos, tres planes y dos sucursales iniciales son 
 - Personalización de nombre y color; subida privada de logo optimizado, con máximo de 256 KB por gimnasio y reemplazo sin acumular archivos.
 - Historial auditable, gráfico descriptivo de entradas y ocupación estimada.
 - PWA instalable con pantalla de desconexión; sin operaciones offline.
-- Avisos internos y notificaciones web push para vencimientos, tres días antes. El cliente activa push desde la campana; `npm run setup` crea claves VAPID locales. En iPhone/iPad se requiere instalar la PWA en la pantalla de inicio.
-- Ejecuta `npm run jobs:reminders` diariamente desde el programador de tareas del hosting para crear avisos y enviar push. WhatsApp/correo siguen dependiendo de proveedor y credenciales.
+- Avisos internos y notificaciones web push para vencimientos de membresía, tres días antes. La app también registra avisos de renovación de Gymia cinco días antes; web push es opcional y requiere consentimiento. El usuario activa push desde la campana; `npm run setup` crea claves VAPID locales. En iPhone/iPad se requiere instalar la PWA en la pantalla de inicio.
+- Ejecuta `npm run jobs:reminders` diariamente desde el programador del hosting para avisos de membresía. Vercel ejecuta el cron de renovaciones de Gymia configurado en `vercel.json`. El correo requiere Resend y la verificación SMS requiere Twilio Verify.
 - Cotización de APIs para alertas externas documentada en [APIs para alertas](docs/API_COTIZACION_ALERTAS.md).
 
 ## Validación
@@ -136,5 +136,6 @@ Si ya tienes PostgreSQL, configura `DATABASE_URL` y omite `db:local`. `compose.y
 - [Reglas de negocio](docs/BUSINESS_RULES.md)
 - [Contrato de API](docs/API.md)
 - [Colaboración y cambios](CONTRIBUTING.md)
+- [Documentos legales (borradores)](docs/legal/v1/README.md)
 
 **No compartir** `.env`, `.local/`, `node_modules/` ni datos personales. El paquete de entrega contiene solo código, documentación y migraciones.
