@@ -4,6 +4,7 @@ import { transaction, audit } from './common';
 import type { Context } from './context';
 import { provisionUser } from './accounts';
 import { effectivePlan, planInfo } from '@/lib/saas-plans';
+import { createPublicId } from '@/lib/public-ids';
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 export async function admin(c: Context, action: string, input: unknown) {
   allow(c.role, ['OWNER']);
@@ -12,11 +13,10 @@ export async function admin(c: Context, action: string, input: unknown) {
       .object({
         name: z.string().trim().min(2).max(100),
         email: z.email(),
-        password: z.string().min(12).max(100).optional().or(z.literal('')),
         role: z.enum(['RECEPTION', 'TRAINER']),
       })
       .parse(input);
-    const user = await provisionUser({ name: d.name, email: d.email, password: d.password });
+    const user = await provisionUser({ name: d.name, email: d.email });
     return transaction(async (tx) => {
       const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
       const employeeLimit = planInfo(
@@ -118,7 +118,9 @@ export async function admin(c: Context, action: string, input: unknown) {
           planInfo(effectivePlan(tenant.saasPlan, tenant.subscriptionExpiresAt)).maxBranches,
         `Tu plan ${planInfo(effectivePlan(tenant.saasPlan, tenant.subscriptionExpiresAt)).name} permite hasta ${planInfo(effectivePlan(tenant.saasPlan, tenant.subscriptionExpiresAt)).maxBranches} sucursal(es).`,
       );
-      const b = await tx.branch.create({ data: { tenantId: c.tenantId, ...d } });
+      const b = await tx.branch.create({
+        data: { tenantId: c.tenantId, publicId: createPublicId('SUC'), ...d },
+      });
       await tx.schedule.createMany({
         data: Array.from({ length: 7 }, (_, weekday) => ({
           tenantId: c.tenantId,

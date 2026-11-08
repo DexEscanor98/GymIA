@@ -6,6 +6,7 @@ import { execute } from '../src/server/operations';
 import { workspace } from '../src/server/workspace';
 import type { Context } from '../src/server/context';
 import { DAY_MS } from '../src/lib/domain';
+import { createPublicId } from '../src/lib/public-ids';
 const safeHost = new URL(process.env.DATABASE_URL!).hostname;
 if (!['localhost', '127.0.0.1', 'postgres'].includes(safeHost))
   throw new Error('Las pruebas de integración solo usan PostgreSQL local.');
@@ -25,7 +26,9 @@ async function command(action: string, input: unknown, ctx = c) {
 beforeAll(async () => {
   for (const n of ['owner', 'other', 'trainer', 'client', 'athlete']) {
     const id = randomUUID();
-    await db.user.create({ data: { id, email: `test-${id}@gymia.test`, name: n } });
+    await db.user.create({
+      data: { id, publicId: createPublicId('PER'), email: `test-${id}@gymia.test`, name: n },
+    });
     users.push(id);
   }
   trainerId = users[2];
@@ -34,6 +37,7 @@ beforeAll(async () => {
     data: {
       name: 'INTEGRATION A',
       slug: `test-${randomUUID()}`,
+      publicId: createPublicId('GYM'),
       accesses: {
         create: [
           { userId: users[0], role: 'OWNER' },
@@ -41,7 +45,7 @@ beforeAll(async () => {
           { userId: clientId, role: 'CLIENT' },
         ],
       },
-      branches: { create: { name: 'Principal' } },
+      branches: { create: { name: 'Principal', publicId: createPublicId('SUC') } },
     },
     include: { branches: true },
   });
@@ -49,8 +53,9 @@ beforeAll(async () => {
     data: {
       name: 'INTEGRATION B',
       slug: `test-${randomUUID()}`,
+      publicId: createPublicId('GYM'),
       accesses: { create: { userId: users[1], role: 'OWNER' } },
-      branches: { create: { name: 'Otra' } },
+      branches: { create: { name: 'Otra', publicId: createPublicId('SUC') } },
     },
     include: { branches: true },
   });

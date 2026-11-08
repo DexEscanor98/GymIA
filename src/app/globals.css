@@ -271,6 +271,12 @@ button svg {
   display: block;
   margin-top: 4px;
 }
+.gym-identity .gym-public-id {
+  color: #d8dfd9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
 .gym-logo {
   width: 34px;
   height: 34px;
@@ -1467,6 +1473,142 @@ td .text-button {
 .auth-switch a {
   font-weight: 700;
   color: #395a2d;
+}
+.personal-signup-callout {
+  display: grid;
+  gap: 13px;
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid #dfe4e9;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f7f9fb, #fff);
+}
+.personal-signup-callout h3 {
+  margin: 3px 0 5px;
+  font-size: 16px;
+}
+.personal-signup-callout p {
+  color: #737b87;
+  font-size: 13px;
+}
+.personal-signup-callout .button {
+  margin-top: 2px;
+}
+.gym-signup-callout {
+  margin-top: 22px;
+}
+.install-app-button {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 43px;
+  padding: 0 15px;
+  border: 1px solid #ffffffa8;
+  border-radius: 999px;
+  background: #26303de8;
+  color: #fff;
+  box-shadow: 0 8px 30px #1b273333;
+  font-size: 13px;
+  font-weight: 650;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.install-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #18202b70;
+  backdrop-filter: blur(7px);
+}
+.install-dialog {
+  position: relative;
+  width: min(100%, 430px);
+  padding: 29px;
+  border: 1px solid #ffffffc4;
+  border-radius: 24px;
+  background: #f8fafcf2;
+  box-shadow: 0 24px 80px #15223436;
+}
+.install-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 19px;
+  border-radius: 15px;
+  background: #e4e9ee;
+  color: #394451;
+}
+.install-dialog h2 {
+  margin: 5px 0 12px;
+  font-size: 23px;
+}
+.install-dialog p,
+.install-dialog ol {
+  margin: 0 0 20px;
+  color: #6b7481;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.install-dialog ol {
+  padding-left: 21px;
+}
+.install-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #e9edf1;
+}
+.settings-public-id,
+.client-public-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px !important;
+  letter-spacing: 0.02em;
+}
+.settings-branch-row code,
+.client-public-id code {
+  color: #67717e;
+  font-size: 10px;
+}
+.client-public-id {
+  margin: 8px 0 12px;
+  color: #737b87;
+}
+.reset-layout {
+  min-height: 100vh;
+}
+.reset-brand {
+  margin-bottom: 34px;
+  font-size: 28px !important;
+}
+.reset-done {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+.reset-done p {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  color: #596574;
+  font-size: 14px;
+}
+.reset-done p svg {
+  flex: 0 0 auto;
+  color: #496d55;
 }
 .loading {
   min-height: 100dvh;

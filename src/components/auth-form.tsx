@@ -85,7 +85,11 @@ export function AuthForm({
         <div className="auth-card">
           <span className="eyebrow">BIENVENIDO A GYMIA</span>
           <h2>
-            {register ? (gymOwner ? 'Registra tu gimnasio' : 'Crea tu cuenta') : 'Qué gusto verte'}
+            {register
+              ? gymOwner
+                ? 'Registra tu gimnasio'
+                : 'Crea tu cuenta personal'
+              : 'Qué gusto verte'}
           </h2>
           <p>
             {register
@@ -143,7 +147,10 @@ export function AuthForm({
               </p>
             )}
             {verificationEmail && (
-              <Link className="text-button" href={`/verify-account?email=${encodeURIComponent(verificationEmail)}`}>
+              <Link
+                className="text-button"
+                href={`/verify-account?email=${encodeURIComponent(verificationEmail)}`}
+              >
                 Ir a verificar mi correo
               </Link>
             )}
@@ -181,12 +188,25 @@ export function AuthForm({
               </Link>
             </div>
           )}
-          <p className="auth-switch">
-            {register ? '¿Ya tienes cuenta?' : '¿Primera vez aquí?'}{' '}
-            <Link href={register ? '/login' : '/register'}>
-              {register ? 'Inicia sesión' : 'Crea tu cuenta'}
-            </Link>
-          </p>
+          {register ? (
+            <p className="auth-switch">
+              ¿Ya tienes cuenta? <Link href="/login">Inicia sesión</Link>
+            </p>
+          ) : (
+            <div className="personal-signup-callout">
+              <div>
+                <span className="eyebrow">PARA QUIEN ENTRENA</span>
+                <h3>¿Primera vez en Gymia?</h3>
+                <p>
+                  Guarda tus rutinas, agenda y alimentación. Puedes vincular tu cuenta a tu gimnasio
+                  después.
+                </p>
+              </div>
+              <Link href="/register" className="button primary wide">
+                Crear cuenta personal <ArrowRight size={18} />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
     </main>

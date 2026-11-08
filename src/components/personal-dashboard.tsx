@@ -256,7 +256,7 @@ export function PersonalDashboard({
           <p>Registra tus rutinas, sesiones y alimentación en un solo lugar.</p>
         </div>
         <div className="personal-id">
-          <span>Tu ID Gymia · privado e intransferible</span>
+          <span>Tu ID único Gymia · compártelo solo con tu gimnasio</span>
           <strong>{data.profile.publicId}</strong>
           <button
             className="text-button"

@@ -51,6 +51,7 @@ enum AppointmentStatus {
 }
 model User {
   id String @id
+  publicId String @unique
   name String
   email String @unique
   emailVerified Boolean @default(false)
@@ -112,6 +113,7 @@ model RateLimit {
 }
 model Tenant {
   id String @id @default(cuid())
+  publicId String @unique
   name String
   slug String @unique
   color String @default("#b9c1cb")
@@ -198,6 +200,7 @@ model Access {
 }
 model Branch {
   id String @id @default(cuid())
+  publicId String @unique
   tenantId String
   name String
   tenant Tenant @relation(fields:[tenantId],references:[id])

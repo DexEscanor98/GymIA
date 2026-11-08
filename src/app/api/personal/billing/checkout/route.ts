@@ -11,7 +11,11 @@ import {
   saveSubscriptionAcceptance,
 } from '@/server/legal-acceptance';
 import { requireVerifiedContacts } from '@/server/verified-contacts';
-import { assertMercadoPagoSandboxAccount, isSandboxPayments, paymentPayerEmail } from '@/server/payments';
+import {
+  assertMercadoPagoSandboxAccount,
+  isSandboxPayments,
+  paymentPayerEmail,
+} from '@/server/payments';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -29,12 +33,13 @@ export async function POST(request: Request) {
     if (isSandboxPayments()) await assertMercadoPagoSandboxAccount(token);
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || new URL(request.url).origin;
+    const account = await db.user.findUniqueOrThrow({
+      where: { id: session.user.id },
+      select: { publicId: true },
+    });
     const profile = await db.athleteProfile.upsert({
       where: { userId: session.user.id },
-      create: {
-        userId: session.user.id,
-        publicId: `GYM-${randomUUID().replaceAll('-', '').slice(0, 20).toUpperCase()}`,
-      },
+      create: { userId: session.user.id, publicId: account.publicId },
       update: {},
     });
     const now = new Date();

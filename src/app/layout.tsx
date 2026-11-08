@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { InstallAppButton } from '@/components/install-app-button';
 export const metadata: Metadata = {
   title: 'Gymia · Tu gimnasio, en orden',
   description: 'Administración de gimnasios, membresías, ventas y entrenamiento.',
@@ -11,7 +12,10 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, them
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        {children}
+        <InstallAppButton />
+      </body>
     </html>
   );
 }

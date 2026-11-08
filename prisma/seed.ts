@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { db } from '../src/lib/db';
 import { auth } from '../src/lib/auth';
+import { createPublicId } from '../src/lib/public-ids';
 const url = new URL(process.env.DATABASE_URL!);
 if (!['localhost', '127.0.0.1'].includes(url.hostname) || process.env.NODE_ENV === 'production')
   throw new Error('La demostración solo se crea en desarrollo local.');
@@ -40,8 +41,14 @@ await db.$transaction(async (tx) => {
     data: {
       name: 'Distrito Fitness',
       slug: 'demo-gym',
+      publicId: createPublicId('GYM'),
       accesses: { create: users.map((u) => ({ userId: u.id, role: u.role })) },
-      branches: { create: [{ name: 'Sede Centro' }, { name: 'Sede Norte' }] },
+      branches: {
+        create: [
+          { name: 'Sede Centro', publicId: createPublicId('SUC') },
+          { name: 'Sede Norte', publicId: createPublicId('SUC') },
+        ],
+      },
     },
     include: { branches: true },
   });

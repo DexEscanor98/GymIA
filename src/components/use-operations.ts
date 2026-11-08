@@ -92,19 +92,11 @@ export function useOperations(
               { value: 'MAN', label: 'Entrenador' },
             ],
           },
-          ...(!m
-            ? [
-                {
-                  name: 'password',
-                  label: 'Contraseña inicial para el cliente',
-                  type: 'password' as const,
-                  required: false,
-                  hint: 'Opcional. Si la escribes, se crea su cuenta y podrá entrar con ese correo.',
-                },
-              ]
-            : []),
         ],
         (v) => ({ ...v, id: m?.id }),
+        !m
+          ? 'Si agregas un correo, Gymia crea la cuenta y envía enlaces para verificarlo y crear su contraseña.'
+          : undefined,
       ),
     link: (m?: MemberData) =>
       open(
@@ -113,14 +105,14 @@ export function useOperations(
         [
           {
             name: 'publicId',
-            label: 'ID personal Gymia',
-            hint: 'El cliente lo encuentra en su espacio personal. Es único y no se puede cambiar ni transferir.',
+            label: 'ID único de persona Gymia',
+            hint: 'Pide a la persona el ID Gymia que aparece en su cuenta personal. Es único y permanente.',
           },
         ],
         (v) => ({ ...v, id: m?.id }),
         m
           ? 'Vincula la cuenta personal que corresponde a este cliente.'
-          : 'Se creará la ficha del cliente usando la cuenta personal indicada.',
+          : 'Se creará la ficha del cliente y quedará vinculada a su cuenta Gymia.',
       ),
     assign: (m: MemberData) =>
       open(
@@ -433,13 +425,6 @@ export function useOperations(
           { name: 'name', label: 'Nombre completo' },
           { name: 'email', label: 'Correo de su cuenta', type: 'email' },
           {
-            name: 'password',
-            label: 'Contraseña inicial',
-            type: 'password',
-            required: false,
-            hint: 'Opcional si la cuenta ya existe. Para crearla aquí, usa al menos 12 caracteres.',
-          },
-          {
             name: 'role',
             label: 'Rol',
             type: 'select',
@@ -450,7 +435,7 @@ export function useOperations(
           },
         ],
         (v) => v,
-        'Si la cuenta no existe, se crea con esta contraseña. Confirma su identidad antes de asignar permisos.',
+        'Enviaremos al empleado un correo para verificar su cuenta y crear una contraseña propia antes de iniciar sesión.',
       ),
     schedule: (weekday: number) => {
       const s = w?.schedules.find((s) => s.branchId === branch && s.weekday === weekday);

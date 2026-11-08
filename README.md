@@ -52,7 +52,7 @@ Las seis personas, cuatro productos, tres planes y dos sucursales iniciales son 
 ## Qué funciona
 
 - Registro e inicio/cierre de sesión con Better Auth. El correo se verifica mediante enlace y el teléfono por código SMS; el acceso a operaciones requiere verificar al menos uno de los dos canales.
-- Dueño y recepción pueden registrar clientes con contraseña inicial; el dueño puede registrar empleados y crear su cuenta en el mismo flujo.
+- Dueño y recepción pueden registrar clientes por correo; Gymia envía un enlace para verificar el correo y otro para que la persona cree su contraseña privada. El dueño puede invitar empleados con el mismo flujo seguro.
 - Cambio entre gimnasios autorizados; permisos comprobados en el servidor.
 - Dueño, recepción, entrenador y cliente con vistas y alcance diferentes.
 - Clientes, vinculación manual con cuentas existentes y credenciales QR.
@@ -70,6 +70,7 @@ Las seis personas, cuatro productos, tres planes y dos sucursales iniciales son 
 - Personalización de nombre y color; subida privada de logo optimizado, con máximo de 256 KB por gimnasio y reemplazo sin acumular archivos.
 - Historial auditable, gráfico descriptivo de entradas y ocupación estimada.
 - PWA instalable con pantalla de desconexión; sin operaciones offline.
+- Cada persona tiene un ID `PER-` único, cada gimnasio un ID `GYM-` y cada sucursal un ID `SUC-`. La vinculación con gimnasios se registra mediante relaciones por rol, sin cambiar el ID de la persona. El botón «Instalar Gymia» aparece en la aplicación y guía la instalación en navegadores compatibles; iPhone/iPad requiere usar Compartir → Agregar a pantalla de inicio en Safari.
 - Avisos internos y notificaciones web push para vencimientos de membresía, tres días antes. La app también registra avisos de renovación de Gymia cinco días antes; web push es opcional y requiere consentimiento. El usuario activa push desde la campana; `npm run setup` crea claves VAPID locales. En iPhone/iPad se requiere instalar la PWA en la pantalla de inicio.
 - Ejecuta `npm run jobs:reminders` diariamente desde el programador del hosting para avisos de membresía. Vercel ejecuta el cron de renovaciones de Gymia configurado en `vercel.json`. El correo requiere Resend y la verificación SMS requiere Twilio Verify.
 - Cotización de APIs para alertas externas documentada en [APIs para alertas](docs/API_COTIZACION_ALERTAS.md).

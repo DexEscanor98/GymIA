@@ -5,6 +5,7 @@ import { transaction } from '@/server/common';
 import { ensure } from '@/lib/domain';
 import { json, errorResponse, sameOrigin, readBody } from '@/server/http';
 import { requireVerifiedContacts } from '@/server/verified-contacts';
+import { createPublicId } from '@/lib/public-ids';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -33,9 +34,10 @@ export async function POST(request: Request) {
         data: {
           name: d.name,
           slug: d.slug,
+          publicId: createPublicId('GYM'),
           saasPlan: 'FREE',
           accesses: { create: { userId: session.user.id, role: 'OWNER' } },
-          branches: { create: { name: 'Principal' } },
+          branches: { create: { name: 'Principal', publicId: createPublicId('SUC') } },
         },
         include: { branches: true },
       });

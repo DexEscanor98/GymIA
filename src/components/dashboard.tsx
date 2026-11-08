@@ -555,6 +555,7 @@ export function Dashboard({
               Espacio de {roles[role].toLowerCase()}
               {owner && ` · Plan ${saasPlans[saasPlanKey(w.tenant.saasPlan)].name}`}
             </span>
+            <small className="gym-public-id">{w.tenant.publicId}</small>
           </div>
         </div>
         <span className="nav-caption">TU ESPACIO</span>
@@ -621,7 +622,9 @@ export function Dashboard({
             <Link className="text-button" href="/personal">
               Mi espacio personal
             </Link>
-            {(client || owner) && w.features.availability && <PushNotifications tenantId={w.tenant.id} />}
+            {(client || owner) && w.features.availability && (
+              <PushNotifications tenantId={w.tenant.id} />
+            )}
             {w.tenants.length > 1 && (
               <select
                 aria-label="Gimnasio"
@@ -664,7 +667,9 @@ export function Dashboard({
           {owner && w.appNotifications.length > 0 && (
             <section className="app-renewal-notices" aria-label="Avisos de Gymia">
               <strong>Avisos de Gymia</strong>
-              {w.appNotifications.map((item) => <p key={item.id}>{item.message}</p>)}
+              {w.appNotifications.map((item) => (
+                <p key={item.id}>{item.message}</p>
+              ))}
             </section>
           )}
           <div className="page-heading">
@@ -865,6 +870,11 @@ export function Dashboard({
                       <span className="eyebrow">TU CREDENCIAL</span>
                       <h2>{m.name}</h2>
                       <p>Ten tu QR listo al entrar y al salir.</p>
+                      {w.currentUserPublicId && (
+                        <p className="client-public-id">
+                          Tu ID Gymia: <code>{w.currentUserPublicId}</code>
+                        </p>
+                      )}
                       <button className="button primary" onClick={() => void showQr(m)}>
                         <QrCode size={18} />
                         Mostrar mi QR
@@ -1116,7 +1126,18 @@ export function Dashboard({
                 </div>
                 {visible.length ? (
                   <Table
-                    headers={['Cliente', 'Membresía', 'Vencimiento', 'Entrenador', 'Acciones']}
+                    headers={
+                      owner
+                        ? [
+                            'Cliente',
+                            'ID Gymia',
+                            'Membresía',
+                            'Vencimiento',
+                            'Entrenador',
+                            'Acciones',
+                          ]
+                        : ['Cliente', 'Membresía', 'Vencimiento', 'Entrenador', 'Acciones']
+                    }
                   >
                     {visible.map((m) => {
                       const s =
@@ -1134,6 +1155,9 @@ export function Dashboard({
                               </div>
                             </div>
                           </td>
+                          {owner && (
+                            <td>{m.personPublicId ? <code>{m.personPublicId}</code> : '—'}</td>
+                          )}
                           <td>
                             {s ? (
                               <>
@@ -1169,7 +1193,7 @@ export function Dashboard({
                                     </button>
                                     {!m.userId && (
                                       <button onClick={() => op.link(m)}>
-                                        Vincular por ID personal
+                                        Vincular por ID Gymia
                                       </button>
                                     )}
                                     <button onClick={() => op.sell('MEMBERSHIP', m.id)}>
@@ -1708,12 +1732,15 @@ export function Dashboard({
                   <div className="panel-heading">
                     <h2>Mi equipo</h2>
                   </div>
-                  <Table headers={['Nombre', 'Rol', 'Estado', 'Acciones']}>
+                  <Table headers={['Nombre', 'ID Gymia', 'Rol', 'Estado', 'Acciones']}>
                     {w.accesses
                       .filter((a) => a.role !== 'CLIENT')
                       .map((a) => (
                         <tr key={a.id}>
                           <td>{a.user.name}</td>
+                          <td>
+                            <code>{a.user.publicId}</code>
+                          </td>
                           <td>{roles[a.role]}</td>
                           <td>
                             <Badge tone={a.active ? 'green' : 'red'}>
@@ -1991,6 +2018,7 @@ export function Dashboard({
                       <span>
                         {w.tenant.timezone} · Capacidad: {w.tenant.capacity} personas
                       </span>
+                      <span className="settings-public-id">ID Gymia: {w.tenant.publicId}</span>
                     </div>
                   </div>
                   <div className="settings-logo-upload">
@@ -2023,6 +2051,7 @@ export function Dashboard({
                           <Activity size={17} />
                         </div>
                         <strong>{b.name}</strong>
+                        <code>{b.publicId}</code>
                         <Badge>Activa</Badge>
                       </div>
                     ))}
@@ -2059,7 +2088,7 @@ export function Dashboard({
               gymia. <span>Tu gimnasio, en orden.</span>
             </span>
             <span>
-              {roles[role]} · {w.tenant.name}
+              {roles[role]} · {w.tenant.name} · ID persona {w.currentUserPublicId}
             </span>
           </footer>
         </main>

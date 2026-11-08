@@ -15,10 +15,8 @@ export async function members(c: Context, action: string, input: unknown) {
         email: z.union([z.email(), z.literal('')]),
         phone: z.string().trim().max(25),
         preference: z.enum(['ANY', 'WOMAN', 'MAN']),
-        password: z.string().min(12).max(100).optional().or(z.literal('')),
       })
       .parse(input);
-    ensure(!d.password || d.email, 'Para crear una contraseña, escribe el correo del cliente.');
     if (!d.id) {
       const tenant = await db.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
       const memberLimit = planInfo(
@@ -31,8 +29,13 @@ export async function members(c: Context, action: string, input: unknown) {
         );
     }
     let userId: string | undefined;
-    if (!d.id && d.email && d.password) {
-      const user = await provisionUser({ name: d.name, email: d.email, password: d.password });
+    if (!d.id && d.email) {
+      ensure(
+        !(await db.user.findUnique({ where: { email: d.email }, select: { id: true } })),
+        'Ese correo ya tiene una cuenta Gymia. Pide a la persona su ID y usa “Vincular por ID”.',
+        409,
+      );
+      const user = await provisionUser({ name: d.name, email: d.email });
       userId = user.id;
     }
     return transaction(async (tx) => {
@@ -60,7 +63,7 @@ export async function members(c: Context, action: string, input: unknown) {
           update: { active: true },
         });
       }
-      const { id, password: _password, ...fields } = d;
+      const { id, ...fields } = d;
       const data = { ...fields, email: d.email || null, phone: d.phone || null, userId };
       const result = id
         ? await tx.member.update({ where: { id }, data: { ...data, userId: undefined } })
@@ -84,20 +87,16 @@ export async function members(c: Context, action: string, input: unknown) {
           publicId: z
             .string()
             .trim()
-            .regex(/^GYM-[A-F0-9]{20}$/),
+            .regex(/^(?:PER|GYM)-[A-F0-9]{20}$/),
         })
         .parse(input);
       if (d.id) await memberFor(tx, c, d.id);
-      const profile = await tx.athleteProfile.findUnique({
-        where: { publicId: d.publicId },
-        include: { user: true },
-      });
+      const user = await tx.user.findUnique({ where: { publicId: d.publicId } });
       ensure(
-        profile,
-        'No encontramos una cuenta personal con ese ID. Verifica el código con el cliente.',
+        user,
+        'No encontramos una cuenta Gymia con ese ID. Verifica el código con la persona.',
         404,
       );
-      const user = profile.user;
       ensure(
         user.emailVerified || user.phoneNumberVerified,
         'Pide al cliente que confirme su correo o teléfono antes de vincular su cuenta.',
@@ -151,7 +150,7 @@ export async function members(c: Context, action: string, input: unknown) {
               phone: null,
             },
           });
-      await audit(tx, c, action, result.id, { userId: user.id, publicId: profile.publicId });
+      await audit(tx, c, action, result.id, { userId: user.id, publicId: user.publicId });
       return result;
     }
     if (action === 'member.assign') {

@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { headers } from 'next/headers';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
@@ -7,14 +6,17 @@ import { ensure } from '@/lib/domain';
 import { errorResponse, json, readBody, sameOrigin } from '@/server/http';
 import { requireVerifiedContacts } from '@/server/verified-contacts';
 
-const profileId = () => `GYM-${randomBytes(10).toString('hex').toUpperCase()}`;
 async function ownedProfile() {
   const session = await auth.api.getSession({ headers: await headers() });
   ensure(session, 'Inicia sesión para continuar.', 401);
   await requireVerifiedContacts(session.user.id);
+  const user = await db.user.findUniqueOrThrow({
+    where: { id: session.user.id },
+    select: { publicId: true },
+  });
   const profile = await db.athleteProfile.upsert({
     where: { userId: session.user.id },
-    create: { userId: session.user.id, publicId: profileId() },
+    create: { userId: session.user.id, publicId: user.publicId },
     update: {},
   });
   return { session, profile };

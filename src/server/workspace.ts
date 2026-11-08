@@ -52,7 +52,7 @@ export async function workspace(c: Context, reportDay?: string) {
         tenantId: c.tenantId,
         ...(!staff ? { OR: [{ role: 'TRAINER' }, { userId: c.userId }] } : {}),
       },
-      include: { user: { select: { id: true, name: true } } },
+      include: { user: { select: { id: true, publicId: true, name: true } } },
     }),
     staff ? db.product.findMany({ where: { tenantId: c.tenantId }, orderBy: { name: 'asc' } }) : [],
     db.plan.findMany({
@@ -152,7 +152,7 @@ export async function workspace(c: Context, reportDay?: string) {
       : [],
     db.access.findMany({
       where: { userId: c.userId, active: true },
-      include: { tenant: { select: { id: true, name: true } } },
+      include: { tenant: { select: { id: true, publicId: true, name: true } } },
     }),
     c.role === 'OWNER'
       ? db.saasSubscription.findMany({
@@ -188,6 +188,7 @@ export async function workspace(c: Context, reportDay?: string) {
   });
   return {
     context: c,
+    currentUserPublicId: accesses.find((access) => access.userId === c.userId)?.user.publicId ?? '',
     dailyTotals,
     tenant: { ...tenantRecord, saasPlan: activePlan },
     features,
@@ -196,6 +197,9 @@ export async function workspace(c: Context, reportDay?: string) {
     saasSubscriptions,
     members: memberRows.map((m) => ({
       ...m,
+      personPublicId: m.userId
+        ? (accesses.find((access) => access.userId === m.userId)?.user.publicId ?? null)
+        : null,
       ...(c.role === 'TRAINER' ? { email: null, phone: null, qrToken: '' } : {}),
       memberships: m.memberships.map((s) => ({ ...s, displayStatus: membershipState(s) })),
     })),
