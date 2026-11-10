@@ -4,12 +4,10 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { ensure } from '@/lib/domain';
 import { errorResponse, json, readBody, sameOrigin } from '@/server/http';
-import { requireVerifiedContacts } from '@/server/verified-contacts';
 
 async function ownedProfile() {
   const session = await auth.api.getSession({ headers: await headers() });
   ensure(session, 'Inicia sesión para continuar.', 401);
-  await requireVerifiedContacts(session.user.id);
   const user = await db.user.findUniqueOrThrow({
     where: { id: session.user.id },
     select: { publicId: true },
@@ -39,55 +37,64 @@ export async function GET() {
           data: { personalPlan: 'FREE' },
         });
     }
-    const [notes, routines, workouts, meals, messages, requests, subscription, gymLinks, appNotifications] =
-      await Promise.all([
-        db.athleteNote.findMany({
-          where: { profileId: profile.id },
-          orderBy: { updatedAt: 'desc' },
-          take: 30,
-        }),
-        db.athleteRoutine.findMany({
-          where: { profileId: profile.id },
-          orderBy: { updatedAt: 'desc' },
-        }),
-        db.athleteWorkout.findMany({
-          where: { profileId: profile.id },
-          orderBy: { startsAt: 'desc' },
-          take: profile.personalPlan === 'COACH' ? 300 : 30,
-        }),
-        db.athleteMeal.findMany({
-          where: {
-            profileId: profile.id,
-            eatenAt: {
-              gte: new Date(Date.now() - (profile.personalPlan === 'COACH' ? 90 : 7) * 86400_000),
-            },
+    const [
+      notes,
+      routines,
+      workouts,
+      meals,
+      messages,
+      requests,
+      subscription,
+      gymLinks,
+      appNotifications,
+    ] = await Promise.all([
+      db.athleteNote.findMany({
+        where: { profileId: profile.id },
+        orderBy: { updatedAt: 'desc' },
+        take: 30,
+      }),
+      db.athleteRoutine.findMany({
+        where: { profileId: profile.id },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      db.athleteWorkout.findMany({
+        where: { profileId: profile.id },
+        orderBy: { startsAt: 'desc' },
+        take: profile.personalPlan === 'COACH' ? 300 : 30,
+      }),
+      db.athleteMeal.findMany({
+        where: {
+          profileId: profile.id,
+          eatenAt: {
+            gte: new Date(Date.now() - (profile.personalPlan === 'COACH' ? 90 : 7) * 86400_000),
           },
-          orderBy: { eatenAt: 'desc' },
-        }),
-        db.coachMessage.findMany({
-          where: { profileId: profile.id },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        }),
-        db.nutritionistRequest.findMany({
-          where: { profileId: profile.id },
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        }),
-        db.athleteSubscription.findFirst({
-          where: { profileId: profile.id },
-          orderBy: { createdAt: 'desc' },
-        }),
-        db.access.findMany({
-          where: { userId: session.user.id, active: true },
-          select: { role: true, tenant: { select: { id: true, name: true, slug: true } } },
-        }),
-        db.appNotification.findMany({
-          where: { userId: session.user.id, tenantId: null, readAt: null },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        }),
-      ]);
+        },
+        orderBy: { eatenAt: 'desc' },
+      }),
+      db.coachMessage.findMany({
+        where: { profileId: profile.id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+      db.nutritionistRequest.findMany({
+        where: { profileId: profile.id },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+      db.athleteSubscription.findFirst({
+        where: { profileId: profile.id },
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.access.findMany({
+        where: { userId: session.user.id, active: true },
+        select: { role: true, tenant: { select: { id: true, name: true, slug: true } } },
+      }),
+      db.appNotification.findMany({
+        where: { userId: session.user.id, tenantId: null, readAt: null },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+    ]);
     const freshProfile =
       profile.personalPlan === 'COACH' &&
       (!subscription ||

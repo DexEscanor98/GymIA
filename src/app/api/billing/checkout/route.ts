@@ -4,7 +4,12 @@ import { db } from '@/lib/db';
 import { planInfo } from '@/lib/saas-plans';
 import { ensure } from '@/lib/domain';
 import { context } from '@/server/context';
-import { assertMercadoPagoSandboxAccount, isSandboxPayments, paymentPayerEmail } from '@/server/payments';
+import { requireVerifiedContacts } from '@/server/verified-contacts';
+import {
+  assertMercadoPagoSandboxAccount,
+  isSandboxPayments,
+  paymentPayerEmail,
+} from '@/server/payments';
 import { errorResponse, json, readBody, sameOrigin } from '@/server/http';
 import {
   legalAcceptanceSchema,
@@ -22,6 +27,7 @@ export async function POST(request: Request) {
       .parse(await readBody(request));
     const c = await context(input.tenantId);
     ensure(c.role === 'OWNER', 'Solo el dueño puede cambiar el plan.', 403);
+    await requireVerifiedContacts(c.userId);
     ensure(
       billingCheckoutIsConfigured(),
       'El checkout requiere las credenciales de Mercado Pago de producción y su firma de Webhooks.',

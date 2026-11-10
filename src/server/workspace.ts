@@ -206,9 +206,7 @@ export async function workspace(c: Context, reportDay?: string) {
     context: c,
     currentUserPublicId: accesses.find((access) => access.userId === c.userId)?.user.publicId ?? '',
     currentUserNeedsEmailVerification:
-      currentUser.gymAccessPendingVerification &&
-      !currentUser.emailVerified &&
-      !currentUser.phoneNumberVerified,
+      !currentUser.emailVerified && !currentUser.phoneNumberVerified,
     dailyTotals,
     tenant: { ...tenantRecord, saasPlan: activePlan },
     features,

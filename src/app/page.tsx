@@ -8,16 +8,6 @@ import { billingCheckoutIsConfigured } from '@/server/legal-acceptance';
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect('/login');
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      emailVerified: true,
-      phoneNumberVerified: true,
-      gymAccessPendingVerification: true,
-    },
-  });
-  if (!user?.emailVerified && !user?.phoneNumberVerified && !user?.gymAccessPendingVerification)
-    redirect('/verify-account');
   const access = await db.access.findFirst({
     where: { userId: session.user.id, active: true },
     select: { id: true },

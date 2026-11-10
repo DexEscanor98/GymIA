@@ -33,7 +33,11 @@ export default async function VerifyAccountPage({
   const profile = await db.athleteProfile.findUnique({ where: { userId: session.user.id } });
   const personalSubscription = profile
     ? await db.athleteSubscription.findFirst({
-        where: { profileId: profile.id, status: { in: ['ACTIVE', 'PAST_DUE'] }, mpPreapprovalId: { not: null } },
+        where: {
+          profileId: profile.id,
+          status: { in: ['ACTIVE', 'PAST_DUE'] },
+          mpPreapprovalId: { not: null },
+        },
         orderBy: { createdAt: 'desc' },
       })
     : null;
@@ -41,11 +45,14 @@ export default async function VerifyAccountPage({
     <ContactVerificationForm
       email={user.email}
       emailVerified={user.emailVerified}
+      canSkip
       phoneNumber={user.phoneNumber ?? ''}
       phoneVerified={user.phoneNumberVerified}
       gymSubscriptions={gymSubscriptions.map((subscription) => ({
         tenantId: subscription.tenantId,
-        gymName: ownedTenants.find((tenant) => tenant.tenantId === subscription.tenantId)?.tenant.name ?? 'Gimnasio',
+        gymName:
+          ownedTenants.find((tenant) => tenant.tenantId === subscription.tenantId)?.tenant.name ??
+          'Gimnasio',
       }))}
       personalSubscriptionActive={Boolean(personalSubscription)}
     />

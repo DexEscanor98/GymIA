@@ -16,6 +16,7 @@ export const auth = betterAuth({
   // Product APIs and onboarding accept either verified email or verified phone.
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: false,
     minPasswordLength: 12,
     sendResetPassword: async ({ user, url }) => {
       await sendTransactionalEmail({

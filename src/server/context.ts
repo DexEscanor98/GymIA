@@ -10,7 +10,7 @@ export async function context(
 ): Promise<Context> {
   const session = await auth.api.getSession({ headers: await headers() });
   ensure(session, 'Inicia sesión para continuar.', 401);
-  if (options.requireVerifiedContacts !== false) await requireVerifiedContacts(session.user.id);
+  if (options.requireVerifiedContacts === true) await requireVerifiedContacts(session.user.id);
   const access = await db.access.findFirst({
     where: { userId: session.user.id, active: true, ...(tenantId ? { tenantId } : {}) },
     include: { tenant: true },

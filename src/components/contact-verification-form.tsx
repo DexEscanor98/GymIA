@@ -10,6 +10,7 @@ export function ContactVerificationForm({
   phoneNumber = '',
   emailVerified = false,
   phoneVerified = false,
+  canSkip = false,
   gymSubscriptions = [],
   personalSubscriptionActive = false,
 }: {
@@ -17,6 +18,7 @@ export function ContactVerificationForm({
   phoneNumber?: string;
   emailVerified?: boolean;
   phoneVerified?: boolean;
+  canSkip?: boolean;
   gymSubscriptions?: { tenantId: string; gymName: string }[];
   personalSubscriptionActive?: boolean;
 }) {
@@ -34,9 +36,15 @@ export function ContactVerificationForm({
     setError('');
     setNotice('');
     try {
-      const result = await authClient.sendVerificationEmail({ email: emailAddress.trim().toLowerCase(), callbackURL: '/verify-account' });
-      if (result.error) throw new Error('No se pudo enviar el enlace. Revisa el correo o intenta más tarde.');
-      setNotice('Enviamos un enlace de verificación si la cuenta requiere confirmación. Revisa también la carpeta de correo no deseado.');
+      const result = await authClient.sendVerificationEmail({
+        email: emailAddress.trim().toLowerCase(),
+        callbackURL: '/verify-account',
+      });
+      if (result.error)
+        throw new Error('No se pudo enviar el enlace. Revisa el correo o intenta más tarde.');
+      setNotice(
+        'Enviamos un enlace de verificación si la cuenta requiere confirmación. Revisa también la carpeta de correo no deseado.',
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo enviar el enlace.');
     } finally {
@@ -89,17 +97,22 @@ export function ContactVerificationForm({
   }
 
   async function cancelRenewal(tenantId?: string) {
-    const confirmation = window.confirm('¿Quieres cancelar la renovación? El acceso seguirá hasta el final del periodo pagado.');
+    const confirmation = window.confirm(
+      '¿Quieres cancelar la renovación? El acceso seguirá hasta el final del periodo pagado.',
+    );
     if (!confirmation) return;
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const response = await fetch(tenantId ? '/api/billing/cancel' : '/api/personal/billing/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(tenantId ? {} : {}) },
-        body: JSON.stringify(tenantId ? { tenantId } : {}),
-      });
+      const response = await fetch(
+        tenantId ? '/api/billing/cancel' : '/api/personal/billing/cancel',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(tenantId ? {} : {}) },
+          body: JSON.stringify(tenantId ? { tenantId } : {}),
+        },
+      );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'No se pudo cancelar la renovación.');
       setNotice('Renovación cancelada. El acceso se conservará hasta terminar el periodo pagado.');
@@ -116,31 +129,62 @@ export function ContactVerificationForm({
         <div className="auth-card">
           <span className="eyebrow">SEGURIDAD DE LA CUENTA</span>
           <h2>Verifica tus datos de contacto</h2>
-          <p>Verifica tu correo electrónico o tu teléfono para habilitar tu cuenta. Basta con confirmar uno de los dos.</p>
+          <p>
+            Verifica tu correo o teléfono para poder comprar suscripciones y recibir avisos de forma
+            segura. Puedes entrar a tu cuenta y verificarlo después.
+          </p>
 
           <div className="verification-status">
-            <p><MailCheck size={18} /> Correo: {emailVerified ? 'verificado' : 'pendiente'}</p>
-            <p><ShieldCheck size={18} /> Teléfono: {phoneVerified ? 'verificado' : 'pendiente'}</p>
+            <p>
+              <MailCheck size={18} /> Correo: {emailVerified ? 'verificado' : 'pendiente'}
+            </p>
+            <p>
+              <ShieldCheck size={18} /> Teléfono: {phoneVerified ? 'verificado' : 'pendiente'}
+            </p>
           </div>
 
           {emailVerified || phoneVerified ? (
-            <div className="verification-complete"><p>Ya tienes un medio de contacto verificado.</p><Link className="button primary wide" href="/">Continuar <ArrowRight size={18} /></Link></div>
+            <div className="verification-complete">
+              <p>Ya tienes un medio de contacto verificado.</p>
+              <Link className="button primary wide" href="/">
+                Continuar <ArrowRight size={18} />
+              </Link>
+            </div>
           ) : (
             <>
-            <form onSubmit={resendEmail}>
-              <label>
-                Correo electrónico
-                <input type="email" value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} required autoComplete="email" />
-              </label>
-              <button className="button primary wide" disabled={busy}>
-                {busy ? 'Enviando…' : 'Reenviar enlace de verificación'} <ArrowRight size={18} />
-              </button>
-              <p className="form-hint">Abre el enlace desde el mismo navegador para continuar. Si no tienes la sesión abierta, inicia sesión después de confirmar el correo.</p>
-            </form>
+              <form onSubmit={resendEmail}>
+                <label>
+                  Correo electrónico
+                  <input
+                    type="email"
+                    value={emailAddress}
+                    onChange={(event) => setEmailAddress(event.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </label>
+                <button className="button primary wide" disabled={busy}>
+                  {busy ? 'Enviando…' : 'Reenviar enlace de verificación'} <ArrowRight size={18} />
+                </button>
+                <p className="form-hint">
+                  Abre el enlace desde el mismo navegador para continuar. Si no tienes la sesión
+                  abierta, inicia sesión después de confirmar el correo.
+                </p>
+              </form>
               <form onSubmit={sendPhoneCode}>
                 <label>
                   Teléfono móvil en formato internacional
-                  <input type="tel" value={address} onChange={(event) => setAddress(event.target.value)} required inputMode="tel" autoComplete="tel" placeholder="+525512345678" pattern="\+[1-9][0-9]{7,14}" title="Incluye el signo + y el código de país." />
+                  <input
+                    type="tel"
+                    value={address}
+                    onChange={(event) => setAddress(event.target.value)}
+                    required
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="+525512345678"
+                    pattern="\+[1-9][0-9]{7,14}"
+                    title="Incluye el signo + y el código de país."
+                  />
                 </label>
                 <button className="button secondary wide" disabled={busy || sent}>
                   {busy ? 'Enviando…' : sent ? 'Código enviado' : 'Enviar código SMS'}
@@ -150,7 +194,15 @@ export function ContactVerificationForm({
                 <form onSubmit={verifyPhone}>
                   <label>
                     Código de verificación
-                    <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} required minLength={4} maxLength={10} />
+                    <input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={code}
+                      onChange={(event) => setCode(event.target.value)}
+                      required
+                      minLength={4}
+                      maxLength={10}
+                    />
                   </label>
                   <button className="button primary wide" disabled={busy || code.length < 4}>
                     {busy ? 'Verificando…' : 'Verificar teléfono'} <ArrowRight size={18} />
@@ -160,25 +212,57 @@ export function ContactVerificationForm({
             </>
           )}
 
-          {error && <p className="form-error" role="alert">{error}</p>}
-          {notice && <p className="form-success" role="status">{notice}</p>}
-          {!emailVerified && !phoneVerified && (gymSubscriptions.length > 0 || personalSubscriptionActive) && (
-            <section className="verification-cancellations">
-              <strong>Administrar renovaciones</strong>
-              <p>Si todavía no puedes completar la verificación, también puedes detener una renovación activa.</p>
-              {gymSubscriptions.map((subscription) => (
-                <button key={subscription.tenantId} className="button secondary wide" type="button" disabled={busy} onClick={() => void cancelRenewal(subscription.tenantId)}>
-                  Cancelar renovación de {subscription.gymName}
-                </button>
-              ))}
-              {personalSubscriptionActive && (
-                <button className="button secondary wide" type="button" disabled={busy} onClick={() => void cancelRenewal()}>
-                  Cancelar Gymia Plus personal
-                </button>
-              )}
-            </section>
+          {canSkip && !emailVerified && !phoneVerified && (
+            <Link className="button secondary wide" href="/">
+              Omitir por ahora <ArrowRight size={18} />
+            </Link>
           )}
-          <p className="auth-switch"><Link href="/login">Volver a iniciar sesión</Link></p>
+
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p className="form-success" role="status">
+              {notice}
+            </p>
+          )}
+          {!emailVerified &&
+            !phoneVerified &&
+            (gymSubscriptions.length > 0 || personalSubscriptionActive) && (
+              <section className="verification-cancellations">
+                <strong>Administrar renovaciones</strong>
+                <p>
+                  Si todavía no puedes completar la verificación, también puedes detener una
+                  renovación activa.
+                </p>
+                {gymSubscriptions.map((subscription) => (
+                  <button
+                    key={subscription.tenantId}
+                    className="button secondary wide"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void cancelRenewal(subscription.tenantId)}
+                  >
+                    Cancelar renovación de {subscription.gymName}
+                  </button>
+                ))}
+                {personalSubscriptionActive && (
+                  <button
+                    className="button secondary wide"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void cancelRenewal()}
+                  >
+                    Cancelar Gymia Plus personal
+                  </button>
+                )}
+              </section>
+            )}
+          <p className="auth-switch">
+            <Link href="/login">Volver a iniciar sesión</Link>
+          </p>
         </div>
       </section>
     </main>
