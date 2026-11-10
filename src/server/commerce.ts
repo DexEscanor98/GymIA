@@ -143,6 +143,8 @@ export async function commerce(c: Context, action: string, input: unknown) {
           reference: z.string().trim().max(100).optional(),
           startsAt: z.iso.datetime().optional(),
           endsAt: z.iso.datetime().optional(),
+          offlineShiftId: z.string().optional(),
+          offlineRecordedAt: z.iso.datetime().optional(),
           idempotencyKey: z.uuid(),
         })
         .parse(input);
@@ -156,7 +158,40 @@ export async function commerce(c: Context, action: string, input: unknown) {
         d.method !== 'TRANSFER' || d.reference,
         'Confirma la transferencia e indica su referencia.',
       );
-      const shift = await openShift(tx, c);
+      ensure(
+        Boolean(d.offlineShiftId) === Boolean(d.offlineRecordedAt),
+        'Faltan datos del registro sin conexión.',
+      );
+      let shift;
+      if (d.offlineShiftId && d.offlineRecordedAt) {
+        ensure(
+          d.kind === 'PRODUCT',
+          'Solo se sincronizan ventas de productos registradas sin conexión.',
+        );
+        const recordedAt = new Date(d.offlineRecordedAt);
+        ensure(
+          !Number.isNaN(recordedAt.getTime()) && recordedAt <= new Date(Date.now() + 5 * 60_000),
+          'El registro sin conexión tiene una fecha inválida. Solicita revisión al dueño.',
+          409,
+        );
+        shift = await tx.shift.findFirst({
+          where: {
+            id: d.offlineShiftId,
+            tenantId: c.tenantId,
+            userId: c.userId,
+            openedAt: { lte: recordedAt },
+            OR: [{ closedAt: null }, { closedAt: { gte: recordedAt } }],
+          },
+          include: { sales: true, refunds: true, movements: true },
+        });
+        ensure(
+          shift,
+          'El turno guardado no coincide con tu cuenta o estaba cerrado. La venta permanece en este dispositivo; pide revisión al dueño.',
+          409,
+        );
+      } else {
+        shift = await openShift(tx, c);
+      }
       if (d.memberId) await memberFor(tx, c, d.memberId);
       let label = '',
         unitCents = 0,
@@ -236,6 +271,7 @@ export async function commerce(c: Context, action: string, input: unknown) {
           method: d.method,
           reference: d.reference,
           idempotencyKey: d.idempotencyKey,
+          offlineRecordedAt: d.offlineRecordedAt ? new Date(d.offlineRecordedAt) : null,
         },
       });
       if (productId)
@@ -251,6 +287,17 @@ export async function commerce(c: Context, action: string, input: unknown) {
           },
         });
       await audit(tx, c, action, sale.id, { totalCents: sale.totalCents, method: d.method });
+      if (d.offlineRecordedAt && shift.closedAt) {
+        const refreshedShift = await tx.shift.findUniqueOrThrow({
+          where: { id: shift.id },
+          include: { sales: true, refunds: true, movements: true },
+        });
+        const totals = cashTotals(refreshedShift);
+        await tx.shift.update({
+          where: { id: shift.id },
+          data: { expectedCents: totals.expected, transferCents: totals.transfer },
+        });
+      }
       return sale;
     }
     if (action === 'sale.cancel') {

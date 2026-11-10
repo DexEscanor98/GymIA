@@ -15,6 +15,7 @@ import {
   Dumbbell,
   LayoutDashboard,
   LogOut,
+  MailCheck,
   Menu,
   Package,
   Plus,
@@ -38,6 +39,15 @@ import { QrScanner } from './qr-scanner';
 import { LogoUpload } from './logo-upload';
 import { PushNotifications } from './push-notifications';
 import { LegalCheckoutDialog } from './legal-checkout-dialog';
+import { OfflineSalesDesk } from './offline-sales-desk';
+import {
+  addOfflineSale,
+  getOfflineSales,
+  getOfflineSnapshot,
+  saveOfflineSnapshot,
+  syncOfflineSales,
+} from '@/lib/offline-storage';
+import type { OfflineSnapshot, QueuedOfflineSale } from '@/lib/offline-storage';
 import type { LegalAcceptanceInput } from '@/lib/legal-versions';
 import Link from 'next/link';
 const money = (c: number) =>
@@ -118,6 +128,9 @@ export function Dashboard({
     [selectedSaasPlan, setSelectedSaasPlan] = useState<keyof typeof saasPlans>('FREE'),
     [page, setPage] = useState<Page>('overview'),
     [loading, setLoading] = useState(true),
+    [isOnline, setIsOnline] = useState(true),
+    [offlineSnapshot, setOfflineSnapshot] = useState<OfflineSnapshot | null>(null),
+    [offlineSales, setOfflineSales] = useState<QueuedOfflineSale[]>([]),
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
     [tenant, setTenant] = useState(''),
@@ -152,6 +165,33 @@ export function Dashboard({
       return;
     }
     setW(result);
+    const currentShift = result.shifts.find(
+      (shift: WorkspaceData['shifts'][number]) =>
+        shift.userId === result.context.userId && !shift.closedAt,
+    );
+    void saveOfflineSnapshot({
+      tenantId: result.tenant.id,
+      tenantName: result.tenant.name,
+      userId: result.context.userId,
+      branchId: currentShift?.branchId ?? result.branches[0]?.id ?? '',
+      branchName:
+        result.branches.find(
+          (b: { id: string }) => b.id === (currentShift?.branchId ?? result.branches[0]?.id),
+        )?.name ?? 'Sucursal',
+      shiftId: currentShift?.id ?? null,
+      shiftOpenedAt: currentShift?.openedAt ?? null,
+      products: ['OWNER', 'RECEPTION'].includes(result.context.role)
+        ? result.products
+            .filter((product: { active: boolean }) => product.active)
+            .map((product: { id: string; name: string; priceCents: number; stock: number }) => ({
+              id: product.id,
+              name: product.name,
+              priceCents: product.priceCents,
+              stock: product.stock,
+            }))
+        : [],
+      savedAt: new Date().toISOString(),
+    }).catch(() => {});
     setBranch((old) =>
       result.branches.some((b: { id: string }) => b.id === old)
         ? old
@@ -162,10 +202,37 @@ export function Dashboard({
   }, [tenant, reportDay]);
   useEffect(() => {
     void load().catch(() => {
-      setError('No se pudo conectar con el servidor.');
-      setLoading(false);
+      void getOfflineSnapshot(tenant || undefined).then((cached) => {
+        if (cached) setOfflineSnapshot(cached);
+        setIsOnline(false);
+        setError('No se pudo conectar con el servidor.');
+        setLoading(false);
+      });
     });
   }, [load]);
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const refresh = () => {
+      setIsOnline(navigator.onLine);
+      if (navigator.onLine && w) {
+        void syncOfflineSales(w.tenant.id, w.context.userId)
+          .then(setOfflineSales)
+          .then(() => load());
+      }
+    };
+    window.addEventListener('online', refresh);
+    window.addEventListener('offline', refresh);
+    return () => {
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('offline', refresh);
+    };
+  }, [w, load]);
+  useEffect(() => {
+    if (!w) return;
+    void getOfflineSales(w.tenant.id, w.context.userId)
+      .then(setOfflineSales)
+      .catch(() => {});
+  }, [w]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(''), 5500);
@@ -180,13 +247,88 @@ export function Dashboard({
   async function run(action: string, input: unknown) {
     setBusy(true);
     try {
-      const res = await fetch('/api/operations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': w!.tenant.id },
-        body: JSON.stringify({ action, input }),
-      });
+      const saveLocally = async () => {
+        const sale = input as {
+          kind?: string;
+          itemId?: string;
+          quantity?: number;
+          method?: 'CASH' | 'TRANSFER';
+          reference?: string;
+          idempotencyKey?: string;
+        };
+        if (
+          action !== 'sale.create' ||
+          sale.kind !== 'PRODUCT' ||
+          !sale.itemId ||
+          !sale.idempotencyKey
+        )
+          throw new Error(
+            'Sin conexión solo se pueden guardar ventas de productos. Las membresías y otros cambios requieren internet.',
+          );
+        const activeShift = w!.shifts.find(
+          (shift) => shift.userId === w!.context.userId && !shift.closedAt,
+        );
+        if (!activeShift)
+          throw new Error('No hay un turno de caja abierto en el último estado guardado.');
+        const product = w!.products.find((entry) => entry.id === sale.itemId && entry.active);
+        if (!product) throw new Error('El producto no estaba en el último catálogo guardado.');
+        const alreadyQueued = (await getOfflineSales(w!.tenant.id, w!.context.userId))
+          .filter((entry) => entry.input.itemId === product.id)
+          .reduce((total, entry) => total + entry.quantity, 0);
+        const quantity = Number(sale.quantity || 0);
+        if (quantity < 1 || product.stock - alreadyQueued < quantity)
+          throw new Error('La cantidad supera las existencias guardadas en este dispositivo.');
+        const recordedAt = new Date().toISOString();
+        const offlineInput = {
+          kind: 'PRODUCT',
+          itemId: product.id,
+          quantity,
+          method: sale.method || 'CASH',
+          ...(sale.method === 'TRANSFER' && sale.reference ? { reference: sale.reference } : {}),
+          idempotencyKey: sale.idempotencyKey,
+          offlineShiftId: activeShift.id,
+          offlineRecordedAt: recordedAt,
+        };
+        await addOfflineSale({
+          idempotencyKey: sale.idempotencyKey,
+          tenantId: w!.tenant.id,
+          userId: w!.context.userId,
+          productName: product.name,
+          quantity,
+          totalCents: product.priceCents * quantity,
+          localCreatedAt: recordedAt,
+          input: offlineInput,
+          status: 'pending',
+        });
+        setOfflineSales(await getOfflineSales(w!.tenant.id, w!.context.userId));
+        setToast('Venta guardada en este dispositivo. Se sincronizará al recuperar internet.');
+      };
+      if (!navigator.onLine) {
+        await saveLocally();
+        return;
+      }
+      let res: Response;
+      try {
+        res = await fetch('/api/operations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-tenant-id': w!.tenant.id },
+          body: JSON.stringify({ action, input }),
+        });
+      } catch (error) {
+        if (action === 'sale.create') {
+          await saveLocally();
+          return;
+        }
+        throw error;
+      }
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
+      if (!res.ok) {
+        if (res.status >= 500 && action === 'sale.create') {
+          await saveLocally();
+          return;
+        }
+        throw new Error(result.error);
+      }
       setToast(result.message || 'Cambios guardados.');
       await load();
       return result;
@@ -310,6 +452,7 @@ export function Dashboard({
         <h2>Preparando tu gimnasio…</h2>
       </main>
     );
+  if (!w && offlineSnapshot) return <OfflineSalesDesk snapshot={offlineSnapshot} />;
   if (!w)
     return (
       <main className="onboarding">
@@ -670,6 +813,55 @@ export function Dashboard({
               {w.appNotifications.map((item) => (
                 <p key={item.id}>{item.message}</p>
               ))}
+            </section>
+          )}
+          {w.currentUserNeedsEmailVerification && (
+            <section className="info-banner email-verification-reminder" role="status">
+              <MailCheck size={21} />
+              <div>
+                <strong>Verifica tu correo cuando puedas</strong>
+                <p>
+                  Tu gimnasio ya te dio acceso. Confirma tu correo para recibir avisos y proteger la
+                  recuperación de tu cuenta.
+                </p>
+              </div>
+              <Link className="button secondary" href="/verify-account">
+                Verificar correo
+              </Link>
+            </section>
+          )}
+          {staff && (!isOnline || offlineSales.length > 0) && (
+            <section className="offline-sync-banner" role="status">
+              <div>
+                <strong>
+                  {isOnline ? 'Ventas guardadas en este dispositivo' : 'Modo sin conexión'}
+                </strong>
+                <p>
+                  {isOnline
+                    ? `${offlineSales.length} venta(s) están pendientes de sincronizar.`
+                    : 'Las ventas de productos se guardan localmente. Membresías, cancelaciones y ajustes de inventario requieren conexión.'}
+                </p>
+                {offlineSales.some((sale) => sale.status === 'failed') && (
+                  <small>
+                    Hay ventas que requieren revisión; se conservan en la cola de este dispositivo.
+                  </small>
+                )}
+              </div>
+              {isOnline && offlineSales.some((sale) => sale.status === 'pending') && (
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    void syncOfflineSales(w.tenant.id, w.context.userId)
+                      .then(setOfflineSales)
+                      .then(() => load())
+                      .finally(() => setBusy(false));
+                  }}
+                >
+                  Sincronizar ahora
+                </button>
+              )}
             </section>
           )}
           <div className="page-heading">

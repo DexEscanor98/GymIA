@@ -45,6 +45,18 @@ export const auth = betterAuth({
       phoneNumberVerified: { type: 'boolean', required: false, defaultValue: false, input: false },
       pendingPhoneNumber: { type: 'string', required: false, input: false },
       publicId: { type: 'string', required: false, input: false },
+      gymAccessPendingVerification: {
+        type: 'boolean',
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
+      gymInviteNeedsPasswordSetup: {
+        type: 'boolean',
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
     },
   },
   databaseHooks: {

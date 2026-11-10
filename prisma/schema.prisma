@@ -55,6 +55,8 @@ model User {
   name String
   email String @unique
   emailVerified Boolean @default(false)
+  gymAccessPendingVerification Boolean @default(false)
+  gymInviteNeedsPasswordSetup Boolean @default(false)
   phoneNumber String?
   phoneNumberVerified Boolean @default(false)
   pendingPhoneNumber String?
@@ -335,6 +337,7 @@ model Sale {
   refundMethod PaymentMethod?
   restocked Boolean?
   idempotencyKey String
+  offlineRecordedAt DateTime?
   shift Shift @relation("Sales",fields:[shiftId],references:[id])
   refundShift Shift? @relation("Refunds",fields:[refundShiftId],references:[id])
   @@unique([tenantId,idempotencyKey])

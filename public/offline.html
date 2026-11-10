@@ -1,42 +1,543 @@
 <!doctype html>
 <html lang="es">
-  <meta charset="utf-8" /><meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
-  /><title>Gymia · Sin conexión</title
-  ><style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #f6f8f5;
-      color: #20342f;
-      font-family: system-ui;
-    }
-    main {
-      max-width: 400px;
-      padding: 35px;
-      text-align: center;
-    }
-    button {
-      background: #c5f36b;
-      border: 0;
-      padding: 14px 24px;
-      border-radius: 9px;
-      font: inherit;
-      cursor: pointer;
-    }
-    p {
-      line-height: 1.6;
-    }
-  </style>
-  <main>
-    <h1>Volvemos cuando haya conexión.</h1>
-    <p>
-      Gymia necesita internet para comprobar membresías y guardar operaciones. No se registraron
-      ventas ni accesos sin conexión.
-    </p>
-    <button onclick="location.reload()">Intentar de nuevo</button>
-  </main>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#f1f4f9" />
+    <title>Gymia · Modo sin conexión</title>
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #20242b;
+        background: #f1f4f9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 22px 14px 50px;
+      }
+      .wrap {
+        max-width: 620px;
+        margin: 0 auto;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 5px 0 26px;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -1px;
+      }
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: #d9e0e6;
+        color: #34413b;
+      }
+      .card {
+        padding: clamp(21px, 5vw, 34px);
+        border: 1px solid #fff;
+        border-radius: 24px;
+        background: #ffffffd9;
+        box-shadow: 0 16px 55px #26384c12;
+        backdrop-filter: blur(18px);
+      }
+      .eyebrow {
+        color: #77818e;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+      }
+      h1 {
+        margin: 8px 0;
+        font-size: clamp(26px, 7vw, 36px);
+        letter-spacing: -1.3px;
+      }
+      p {
+        color: #6e7784;
+        line-height: 1.55;
+        font-size: 14px;
+      }
+      .state {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin: 10px 0 18px;
+        padding: 8px 11px;
+        border-radius: 99px;
+        background: #f7e9e7;
+        color: #914f49;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .state.online {
+        background: #e6f1e8;
+        color: #3d6847;
+      }
+      form {
+        display: grid;
+        gap: 14px;
+        margin-top: 22px;
+      }
+      label {
+        display: grid;
+        gap: 7px;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      input,
+      select {
+        width: 100%;
+        min-height: 45px;
+        padding: 10px 12px;
+        border: 1px solid #dfe4e9;
+        border-radius: 12px;
+        background: #fff;
+        font: inherit;
+        color: #20242b;
+      }
+      button {
+        min-height: 45px;
+        padding: 10px 15px;
+        border: 1px solid #dbe1e7;
+        border-radius: 13px;
+        background: #fff;
+        color: #20242b;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.primary {
+        border-color: #293545;
+        background: #293545;
+        color: white;
+      }
+      button:disabled {
+        opacity: 0.52;
+        cursor: not-allowed;
+      }
+      .total {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 14px;
+        border-radius: 14px;
+        background: #f4f6f8;
+      }
+      .total strong {
+        font-size: 19px;
+      }
+      .total small {
+        width: 100%;
+        color: #75808c;
+      }
+      .notice {
+        min-height: 22px;
+        margin: 12px 0;
+        color: #466e4c;
+        font-size: 13px;
+      }
+      .warning {
+        padding: 13px;
+        border: 1px solid #ead7b8;
+        border-radius: 13px;
+        background: #fff8eb;
+        color: #765c31;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .queue-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 28px 0 11px;
+      }
+      .queue-head h2 {
+        margin: 0;
+        font-size: 17px;
+      }
+      .queue-head span,
+      .quiet {
+        color: #798391;
+        font-size: 12px;
+      }
+      .queue {
+        display: grid;
+        gap: 8px;
+        padding: 0;
+        list-style: none;
+      }
+      .queue li {
+        display: flex;
+        justify-content: space-between;
+        gap: 13px;
+        padding: 13px;
+        border: 1px solid #e6e9ed;
+        border-radius: 13px;
+        background: #fff;
+      }
+      .queue li div {
+        display: grid;
+        gap: 4px;
+      }
+      .queue small,
+      .queue span {
+        color: #798391;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      .queue .error {
+        color: #9a5149;
+      }
+      .local-note {
+        margin: 18px 3px;
+        color: #87909a;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      .hidden {
+        display: none !important;
+      }
+      @media (max-width: 440px) {
+        .queue-head {
+          align-items: flex-start;
+        }
+        .queue li {
+          flex-direction: column;
+        }
+        .queue li > button {
+          align-self: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="brand"><span class="mark">✳</span>gymia.</div>
+      <section class="card">
+        <span class="eyebrow">OPERACIÓN LOCAL</span>
+        <h1>Ventas sin conexión</h1>
+        <p>
+          Se guardan en este dispositivo y se sincronizan cuando regrese internet. En este modo solo
+          se registran productos; las membresías, cancelaciones y ajustes de inventario requieren
+          conexión.
+        </p>
+        <div id="state" class="state">Sin conexión</div>
+        <p id="gym" class="quiet">Buscando el último catálogo guardado…</p>
+        <div id="no-shift" class="warning hidden">
+          No había un turno de caja abierto cuando se guardó el catálogo. Reconéctate y abre caja
+          para poder registrar ventas.
+        </div>
+        <form id="form" class="hidden">
+          <label>Producto<select id="product" required></select></label>
+          <label
+            >Cantidad<input id="quantity" type="number" min="1" step="1" value="1" required
+          /></label>
+          <label
+            >Método de pago<select id="method">
+              <option value="CASH">Efectivo</option>
+              <option value="TRANSFER">Transferencia confirmada</option>
+            </select></label
+          >
+          <label id="reference-wrap" class="hidden"
+            >Referencia de transferencia<input id="reference" maxlength="100"
+          /></label>
+          <div class="total">
+            <span>Total estimado</span><strong id="total">$0.00</strong><small id="stock"></small>
+          </div>
+          <button class="primary" id="save" type="submit">Guardar venta en este dispositivo</button>
+        </form>
+        <p class="notice" id="notice" role="status"></p>
+        <div class="queue-head">
+          <div>
+            <h2>Ventas pendientes</h2>
+            <span id="branch"></span>
+          </div>
+          <button id="sync" type="button">Sincronizar</button>
+        </div>
+        <ul id="queue" class="queue"></ul>
+        <p class="quiet" id="empty">No hay ventas pendientes.</p>
+      </section>
+      <p class="local-note">
+        La cola se guarda en IndexedDB de este navegador. No borres los datos del sitio ni cierres
+        sesión hasta ver la confirmación de sincronización. Gymia nunca copia la cookie de sesión al
+        caché; el navegador la adjunta de forma segura al sincronizar.
+      </p>
+    </main>
+    <script>
+      (() => {
+        const DB_NAME = 'gymia-offline-v1',
+          SNAPSHOTS = 'snapshots',
+          SALES = 'sales';
+        let db = null,
+          snapshot = null,
+          queue = [];
+        const $ = (id) => document.getElementById(id);
+        const money = (cents) =>
+          new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+            cents / 100,
+          );
+        function openDb() {
+          return new Promise((resolve, reject) => {
+            const r = indexedDB.open(DB_NAME, 1);
+            r.onupgradeneeded = () => {
+              if (!r.result.objectStoreNames.contains(SNAPSHOTS))
+                r.result.createObjectStore(SNAPSHOTS, { keyPath: 'tenantId' });
+              if (!r.result.objectStoreNames.contains(SALES))
+                r.result.createObjectStore(SALES, { keyPath: 'idempotencyKey' });
+            };
+            r.onsuccess = () => {
+              db = r.result;
+              resolve(db);
+            };
+            r.onerror = () => reject(r.error);
+          });
+        }
+        function request(store, mode, fn) {
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, mode),
+              r = fn(tx.objectStore(store));
+            r.onsuccess = () => resolve(r.result);
+            r.onerror = () => reject(r.error);
+            tx.onerror = () => reject(tx.error);
+          });
+        }
+        function status() {
+          const online = navigator.onLine;
+          $('state').textContent = online ? 'Conexión disponible' : 'Sin conexión';
+          $('state').classList.toggle('online', online);
+          $('sync').disabled = !online || !queue.length;
+        }
+        function refreshProduct() {
+          const p = snapshot?.products.find((x) => x.id === $('product').value);
+          if (!p) return;
+          const queued = queue
+              .filter((x) => x.input.itemId === p.id)
+              .reduce((n, x) => n + x.quantity, 0),
+            available = Math.max(0, p.stock - queued),
+            qty = Math.max(1, Number($('quantity').value || 1));
+          $('quantity').max = String(available);
+          $('stock').textContent = `${available} disponibles según el último inventario guardado.`;
+          $('total').textContent = money(p.priceCents * qty);
+          $('save').disabled = !snapshot?.shiftId || available < 1 || qty > available;
+        }
+        function renderQueue() {
+          queue.sort((a, b) => a.localCreatedAt.localeCompare(b.localCreatedAt));
+          $('queue').replaceChildren();
+          $('empty').classList.toggle('hidden', queue.length > 0);
+          for (const sale of queue) {
+            const li = document.createElement('li'),
+              info = document.createElement('div'),
+              name = document.createElement('strong'),
+              details = document.createElement('span');
+            name.textContent = `${sale.quantity} × ${sale.productName}`;
+            details.textContent = `${new Date(sale.localCreatedAt).toLocaleString('es-MX')} · ${money(sale.totalCents)}`;
+            info.append(name, details);
+            li.append(info);
+            if (sale.error) {
+              const error = document.createElement('small');
+              error.className = 'error';
+              error.textContent = sale.error;
+              info.append(error);
+            }
+            if (sale.status === 'failed') {
+              const retry = document.createElement('button');
+              retry.textContent = 'Reintentar';
+              retry.addEventListener('click', async () => {
+                sale.status = 'pending';
+                sale.error = undefined;
+                await request(SALES, 'readwrite', (s) => s.put(sale));
+                await refresh();
+                await sync();
+              });
+              li.append(retry);
+            } else {
+              const badge = document.createElement('span');
+              badge.textContent = 'Pendiente de sincronizar';
+              li.append(badge);
+            }
+            $('queue').append(li);
+          }
+          status();
+          refreshProduct();
+        }
+        async function refresh() {
+          queue = await request(SALES, 'readonly', (s) => s.getAll());
+          renderQueue();
+        }
+        async function sync() {
+          if (!navigator.onLine || !db) return;
+          status();
+          let needsRetry = false;
+          for (const sale of [...queue]) {
+            if (sale.status === 'failed') continue;
+            try {
+              const r = await fetch('/api/operations', {
+                method: 'POST',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { 'Content-Type': 'application/json', 'x-tenant-id': sale.tenantId },
+                body: JSON.stringify({ action: 'sale.create', input: sale.input }),
+              });
+              if (r.ok) {
+                await request(SALES, 'readwrite', (s) => s.delete(sale.idempotencyKey));
+                continue;
+              }
+              if (r.status >= 500) {
+                needsRetry = true;
+                break;
+              }
+              let msg = `La venta requiere revisión (HTTP ${r.status}).`;
+              try {
+                const data = await r.json();
+                if (typeof data.error === 'string') msg = data.error;
+              } catch {}
+              sale.status = 'failed';
+              sale.error = msg;
+              await request(SALES, 'readwrite', (s) => s.put(sale));
+            } catch {
+              needsRetry = true;
+              break;
+            }
+          }
+          await refresh();
+          if (needsRetry)
+            $('notice').textContent =
+              'La conexión aún no está disponible. Las ventas siguen guardadas en este dispositivo.';
+          else if (!queue.some((x) => x.status === 'pending'))
+            $('notice').textContent = queue.length
+              ? 'Hay ventas que requieren revisión; no se borraron.'
+              : 'Ventas sincronizadas con el gimnasio.';
+        }
+        function registerSync() {
+          if ('serviceWorker' in navigator)
+            navigator.serviceWorker.ready
+              .then((reg) => {
+                if ('sync' in reg) reg.sync.register('gymia-sync-sales').catch(() => {});
+              })
+              .catch(() => {});
+        }
+        async function start() {
+          try {
+            await openDb();
+            const snaps = await request(SNAPSHOTS, 'readonly', (s) => s.getAll());
+            snapshot = snaps.sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0] || null;
+            if (!snapshot) {
+              $('gym').textContent =
+                'Aún no hay un catálogo guardado. Abre Gymia con internet, inicia sesión y carga tu gimnasio una vez.';
+              $('no-shift').classList.remove('hidden');
+              await refresh();
+              return;
+            }
+            $('gym').textContent =
+              `${snapshot.tenantName} · turno y catálogo guardados ${new Date(snapshot.savedAt).toLocaleString('es-MX')}`;
+            $('branch').textContent = snapshot.branchName || 'Sucursal';
+            if (!snapshot.shiftId) {
+              $('no-shift').classList.remove('hidden');
+            } else {
+              $('form').classList.remove('hidden');
+              const select = $('product');
+              for (const item of snapshot.products) {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} · ${money(item.priceCents)} · ${item.stock} guardados`;
+                select.append(option);
+              }
+              if (!snapshot.products.length) {
+                $('form').classList.add('hidden');
+                $('no-shift').textContent =
+                  'No había productos activos en el último catálogo guardado.';
+                $('no-shift').classList.remove('hidden');
+              }
+            }
+            await refresh();
+            if (navigator.onLine) await sync();
+          } catch {
+            $('gym').textContent = 'No se pudo abrir el almacenamiento local de este navegador.';
+            $('no-shift').classList.remove('hidden');
+          }
+        }
+        $('method').addEventListener('change', () => {
+          $('reference-wrap').classList.toggle('hidden', $('method').value !== 'TRANSFER');
+        });
+        $('product').addEventListener('change', refreshProduct);
+        $('quantity').addEventListener('input', refreshProduct);
+        $('sync').addEventListener('click', sync);
+        window.addEventListener('online', () => {
+          status();
+          sync();
+        });
+        window.addEventListener('offline', status);
+        $('form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const product = snapshot?.products.find((x) => x.id === $('product').value),
+            quantity = Number($('quantity').value),
+            method = $('method').value,
+            reference = $('reference').value.trim();
+          if (!snapshot?.shiftId || !product) return;
+          if (method === 'TRANSFER' && !reference) {
+            $('notice').textContent = 'Escribe la referencia de la transferencia confirmada.';
+            return;
+          }
+          const queued = queue
+            .filter((x) => x.input.itemId === product.id)
+            .reduce((n, x) => n + x.quantity, 0);
+          if (quantity < 1 || quantity > product.stock - queued) {
+            $('notice').textContent =
+              'La cantidad supera las existencias guardadas en este dispositivo.';
+            return;
+          }
+          const createdAt = new Date().toISOString(),
+            key = crypto.randomUUID(),
+            sale = {
+              idempotencyKey: key,
+              tenantId: snapshot.tenantId,
+              userId: snapshot.userId,
+              productName: product.name,
+              quantity,
+              totalCents: product.priceCents * quantity,
+              localCreatedAt: createdAt,
+              status: 'pending',
+              input: {
+                kind: 'PRODUCT',
+                itemId: product.id,
+                quantity,
+                method,
+                ...(method === 'TRANSFER' ? { reference } : {}),
+                idempotencyKey: key,
+                offlineShiftId: snapshot.shiftId,
+                offlineRecordedAt: createdAt,
+              },
+            };
+          try {
+            await request(SALES, 'readwrite', (s) => s.add(sale));
+            $('notice').textContent =
+              'Venta guardada en este dispositivo y pendiente de sincronización.';
+            $('quantity').value = '1';
+            $('reference').value = '';
+            await refresh();
+            registerSync();
+            if (navigator.onLine) await sync();
+          } catch {
+            $('notice').textContent =
+              'No se pudo guardar. Libera espacio del navegador y vuelve a intentarlo.';
+          }
+        });
+        start();
+      })();
+    </script>
+  </body>
 </html>

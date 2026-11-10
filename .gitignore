@@ -11,6 +11,29 @@ test-results/
 .DS_Store
 coverage/
 
+# Personal deliverables and generated documentation should stay outside the app repo.
+*.doc
+*.docx
+*.pdf
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.zip
+docs/entrega/
+docs/presentations/
+
+# Local AI-agent instructions and generated assistant metadata.
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+*.instructions.md
+.claude/
+.cursor/
+.gemini/
+.windsurf/
+.aider*
+
 LOCAL-ACCESS.md
 .vercel
 .env*

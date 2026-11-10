@@ -3,7 +3,17 @@ import { cashTotals, dayBounds, localDay, membershipState } from '@/lib/domain';
 import type { Context } from './context';
 import { effectivePlan, planInfo } from '@/lib/saas-plans';
 export async function workspace(c: Context, reportDay?: string) {
-  const tenantRecord = await db.tenant.findUniqueOrThrow({ where: { id: c.tenantId } });
+  const [tenantRecord, currentUser] = await Promise.all([
+    db.tenant.findUniqueOrThrow({ where: { id: c.tenantId } }),
+    db.user.findUniqueOrThrow({
+      where: { id: c.userId },
+      select: {
+        emailVerified: true,
+        phoneNumberVerified: true,
+        gymAccessPendingVerification: true,
+      },
+    }),
+  ]);
   const activePlan = effectivePlan(tenantRecord.saasPlan, tenantRecord.subscriptionExpiresAt);
   const features = { availability: planInfo(activePlan).paidFeatures };
   const staff = c.role === 'OWNER' || c.role === 'RECEPTION';
@@ -166,7 +176,13 @@ export async function workspace(c: Context, reportDay?: string) {
   const [daySales, dayRefunds] = staff
     ? await Promise.all([
         db.sale.findMany({
-          where: { tenantId: c.tenantId, createdAt: { gte: start, lte: end } },
+          where: {
+            tenantId: c.tenantId,
+            OR: [
+              { offlineRecordedAt: null, createdAt: { gte: start, lte: end } },
+              { offlineRecordedAt: { gte: start, lte: end } },
+            ],
+          },
           select: { totalCents: true, method: true },
         }),
         db.sale.findMany({
@@ -189,6 +205,10 @@ export async function workspace(c: Context, reportDay?: string) {
   return {
     context: c,
     currentUserPublicId: accesses.find((access) => access.userId === c.userId)?.user.publicId ?? '',
+    currentUserNeedsEmailVerification:
+      currentUser.gymAccessPendingVerification &&
+      !currentUser.emailVerified &&
+      !currentUser.phoneNumberVerified,
     dailyTotals,
     tenant: { ...tenantRecord, saasPlan: activePlan },
     features,
